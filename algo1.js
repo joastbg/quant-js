@@ -1,5 +1,27 @@
 var a=1;
 
+// TODO: Adapt for QuantLib
+// Add Option object, with parameters, then send to various pricing functions
+
+function OptionParams(optionType, underlyingPrice, strikePrice, dividendYield, riskFreeRate, volatility) { 
+	this.optionType = optionType;
+	this.underlyingPrice = underlyingPrice;
+	this.strikePrice = strikePrice;
+	this.dividendYield = dividendYield;
+	this.riskFreeRate = riskFreeRate;
+	this.volatility = volatility;
+}
+
+function testParams() {
+	Print(new OptionParams("PUT", 36, 40, 0.00, 0.06, 0.20));
+
+	// Rough test of running pricing model, simple BS
+	// maturity(17, QuantLib::May, 1999);
+	// QuantLib::Date todaysDate(15, QuantLib::May, 1998);
+	raptor.eqtest(new OptionParams("PUT", 36, 40, 0.00, 0.06, 0.20));
+
+}
+
 // Initialize
 function init() {
 	console.log('Initializing algo APAN');
@@ -35,3 +57,5 @@ function tickHandler(data) {
 function deinit() {
 	console.log('Cleaning up alog');
 }
+
+testParams();

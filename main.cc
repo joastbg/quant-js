@@ -65,6 +65,42 @@ v8::Handle<v8::Value> buy(const v8::Arguments& args)
 
 v8::Handle<v8::Value> Print(const v8::Arguments& args) {
 
+    if (args[0]->IsObject()) {
+        Handle<Object> object = Handle<Object>::Cast(args[0]);
+
+        // optionType, underlyingPrice, strikePrice, dividendYield, riskFreeRate, volatility
+        Handle<Value> optionType = object->Get(String::New("optionType"));
+        Handle<Value> underlyingPrice = object->Get(String::New("underlyingPrice"));
+        Handle<Value> strikePrice = object->Get(String::New("strikePrice"));
+        Handle<Value> dividendYield = object->Get(String::New("dividendYield"));
+        Handle<Value> riskFreeRate = object->Get(String::New("riskFreeRate"));
+        Handle<Value> volatility = object->Get(String::New("volatility"));
+
+        v8::String::AsciiValue optionTypeStr(optionType->ToString());
+        std::cout << *optionTypeStr << std::endl;
+        std::cout << "";
+
+        v8::String::AsciiValue underlyingPriceStr(underlyingPrice->ToString());
+        std::cout << *underlyingPriceStr << std::endl;
+        std::cout << "";
+
+        v8::String::AsciiValue strikePriceStr(strikePrice->ToString());
+        std::cout << *strikePriceStr << std::endl;
+        std::cout << "";
+
+        v8::String::AsciiValue dividendYieldStr(dividendYield->ToString());
+        std::cout << *dividendYieldStr << std::endl;
+        std::cout << "";
+
+        v8::String::AsciiValue riskFreeRateStr(riskFreeRate->ToString());
+        std::cout << *riskFreeRateStr << std::endl;
+        std::cout << "";
+
+        v8::String::AsciiValue volatilityStr(volatility->ToString());
+        std::cout << *volatilityStr << std::endl;
+        std::cout << "";
+    }
+
     for (int i = 0; i < args.Length(); i++) {
         v8::String::AsciiValue str(args[i]->ToString());
         std::cout << *str << std::endl;
@@ -215,6 +251,85 @@ Handle<Value> Raptor_Version(const Arguments& args)
 Handle<Value> Equity_Option_01(const Arguments& args)
 {
     // TODO: get parameters from args
+    double underlyingDouble = 0.0;
+    double strikeDouble = 0.0;
+    double dividendYieldDouble = 0.0;
+    double riskFreeRateDouble = 0.0;
+    double volatilityDouble = 0.0;
+
+    if (args[0]->IsObject()) {
+        Handle<Object> object = Handle<Object>::Cast(args[0]);
+
+        // optionType, underlyingPrice, strikePrice, dividendYield, riskFreeRate, volatility
+        Handle<Value> optionType = object->Get(String::New("optionType"));
+        Handle<Value> underlyingPrice = object->Get(String::New("underlyingPrice"));
+        Handle<Value> strikePrice = object->Get(String::New("strikePrice"));
+        Handle<Value> dividendYield = object->Get(String::New("dividendYield"));
+        Handle<Value> riskFreeRate = object->Get(String::New("riskFreeRate"));
+        Handle<Value> volatility = object->Get(String::New("volatility"));
+
+        v8::String::AsciiValue optionTypeStr(optionType->ToString());
+
+        if (underlyingPrice->IsNumber()) {
+            Handle<Number> underlyingPriceNum = Handle<Number>::Cast(underlyingPrice);
+            //v8::Number underlyingPriceNumber(underlyingPriceNum->value);
+            //std::cout << underlyingPriceNum << std::endl;
+            
+            v8::String::AsciiValue testValue(underlyingPriceNum->ToString());
+            //v8::Number numberValue(underlyingPriceNum);
+            //std::cout << *testValue << std::endl;
+            underlyingDouble = atof(*testValue);
+            std::cout << underlyingDouble << std::endl;
+        }
+
+        if (strikePrice->IsNumber()) {
+            Handle<Number> strikePriceNum = Handle<Number>::Cast(strikePrice);
+            //v8::Number underlyingPriceNumber(underlyingPriceNum->value);
+            //std::cout << underlyingPriceNum << std::endl;
+            
+            v8::String::AsciiValue testValue(strikePriceNum->ToString());
+            //v8::Number numberValue(underlyingPriceNum);
+            //std::cout << *testValue << std::endl;
+            strikeDouble = atof(*testValue);
+            std::cout << strikeDouble << std::endl;
+        }
+
+        if (dividendYield->IsNumber()) {
+            Handle<Number> dividendYieldNum = Handle<Number>::Cast(dividendYield);
+            //v8::Number underlyingPriceNumber(underlyingPriceNum->value);
+            //std::cout << underlyingPriceNum << std::endl;
+            
+            v8::String::AsciiValue testValue(dividendYieldNum->ToString());
+            //v8::Number numberValue(underlyingPriceNum);
+            //std::cout << *testValue << std::endl;
+            dividendYieldDouble = atof(*testValue);
+            std::cout << dividendYieldDouble << std::endl;
+        }
+
+        if (riskFreeRate->IsNumber()) {
+            Handle<Number> riskFreeRateNum = Handle<Number>::Cast(riskFreeRate);
+            //v8::Number underlyingPriceNumber(underlyingPriceNum->value);
+            //std::cout << underlyingPriceNum << std::endl;
+            
+            v8::String::AsciiValue testValue(riskFreeRateNum->ToString());
+            //v8::Number numberValue(underlyingPriceNum);
+            //std::cout << *testValue << std::endl;
+            riskFreeRateDouble = atof(*testValue);
+            std::cout << riskFreeRateDouble << std::endl;
+        }
+
+        if (volatility->IsNumber()) {
+            Handle<Number> volatilityNum = Handle<Number>::Cast(volatility);
+            //v8::Number underlyingPriceNumber(underlyingPriceNum->value);
+            //std::cout << underlyingPriceNum << std::endl;
+            
+            v8::String::AsciiValue testValue(volatilityNum->ToString());
+            //v8::Number numberValue(underlyingPriceNum);
+            //std::cout << *testValue << std::endl;
+            volatilityDouble = atof(*testValue);
+            std::cout << volatilityDouble << std::endl;
+        }
+    }
 
     // set up dates
     QuantLib::Calendar calendar = QuantLib::TARGET();
@@ -224,11 +339,11 @@ Handle<Value> Equity_Option_01(const Arguments& args)
 
     // our options
     QuantLib::Option::Type type(QuantLib::Option::Put);
-    QuantLib::Real underlying = 36;
-    QuantLib::Real strike = 40;
-    QuantLib::Spread dividendYield = 0.00;
-    QuantLib::Rate riskFreeRate = 0.06;
-    QuantLib::Volatility volatility = 0.20;
+    QuantLib::Real underlying = underlyingDouble;
+    QuantLib::Real strike = strikeDouble;
+    QuantLib::Spread dividendYield = dividendYieldDouble;
+    QuantLib::Rate riskFreeRate = riskFreeRateDouble;
+    QuantLib::Volatility volatility = volatilityDouble;
     QuantLib::Date maturity(17, QuantLib::May, 1999);
     QuantLib::DayCounter dayCounter = QuantLib::Actual365Fixed();
 
@@ -371,6 +486,7 @@ int main(int argc, char* argv[]) {
     raptor_proto->Set("version", FunctionTemplate::New(Raptor_Version));
     raptor_proto->Set("subscribe", FunctionTemplate::New(Raptor_Subscribe));
 
+    raptor_proto->Set("Print", FunctionTemplate::New(Print));
     raptor_proto->Set("eqtest", FunctionTemplate::New(Equity_Option_01));
 
     Handle<ObjectTemplate> raptor_inst = raptor_templ->InstanceTemplate();

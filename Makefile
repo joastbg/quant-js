@@ -15,7 +15,7 @@ clean:
 	rm -rf *o quantjs
 		
 run:
-	./quantjs algo.js
+	./quantjs algo1.js
 		
 runa:
-	./quantjs algo.js
+	./quantjs algo1.js
