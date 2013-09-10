@@ -14,6 +14,10 @@
 #include <pthread.h>
 //#include <ev.h>
 
+// the only header you need to use QuantLib
+#include <ql/quantlib.hpp>
+//using namespace QuantLib;
+
 using namespace v8;
 
 using namespace boost::gregorian;
@@ -208,6 +212,53 @@ Handle<Value> Raptor_Version(const Arguments& args)
     return v8::String::New(static_cast<RaptorAPI*>(ptr)->Version().c_str());
 }
 
+Handle<Value> Equity_Option_01(const Arguments& args)
+{
+    // TODO: get parameters from args
+
+    // set up dates
+    QuantLib::Calendar calendar = QuantLib::TARGET();
+    QuantLib::Date todaysDate(15, QuantLib::May, 1998);
+    QuantLib::Date settlementDate(17, QuantLib::May, 1998);
+    QuantLib::Settings::instance().evaluationDate() = todaysDate;
+
+    // our options
+    QuantLib::Option::Type type(QuantLib::Option::Put);
+    QuantLib::Real underlying = 36;
+    QuantLib::Real strike = 40;
+    QuantLib::Spread dividendYield = 0.00;
+    QuantLib::Rate riskFreeRate = 0.06;
+    QuantLib::Volatility volatility = 0.20;
+    QuantLib::Date maturity(17, QuantLib::May, 1999);
+    QuantLib::DayCounter dayCounter = QuantLib::Actual365Fixed();
+
+    // Black-Scholes for European
+    boost::shared_ptr<QuantLib::Exercise> europeanExercise(new QuantLib::EuropeanExercise(maturity));
+
+    boost::shared_ptr<QuantLib::StrikedTypePayoff> payoff(new QuantLib::PlainVanillaPayoff(type, strike));
+
+    QuantLib::VanillaOption europeanOption(payoff, europeanExercise);
+
+    //boost::shared_ptr<QuantLib::BlackScholesMertonProcess> bsmProcess(new QuantLib::BlackScholesMertonProcess(underlyingH, flatDividendTS, flatTermStructure, flatVolTS));
+    //QuantLib::
+
+    QuantLib::Handle<QuantLib::Quote> underlyingH(boost::shared_ptr<QuantLib::Quote>(new QuantLib::SimpleQuote(underlying)));
+
+    // bootstrap the yield/dividend/vol curves
+    QuantLib::Handle<QuantLib::YieldTermStructure> flatTermStructure(boost::shared_ptr<QuantLib::YieldTermStructure>(new QuantLib::FlatForward(settlementDate, riskFreeRate, dayCounter)));
+    QuantLib::Handle<QuantLib::YieldTermStructure> flatDividendTS(boost::shared_ptr<QuantLib::YieldTermStructure>(new QuantLib::FlatForward(settlementDate, dividendYield, dayCounter)));
+    QuantLib::Handle<QuantLib::BlackVolTermStructure> flatVolTS(boost::shared_ptr<QuantLib::BlackVolTermStructure>(new QuantLib::BlackConstantVol(settlementDate, calendar, volatility, dayCounter)));
+    
+    boost::shared_ptr<QuantLib::BlackScholesMertonProcess> bsmProcess(new QuantLib::BlackScholesMertonProcess(underlyingH, flatDividendTS,flatTermStructure, flatVolTS));
+
+    //europeanOption.setPricingEngine(boost::shared_ptr<PricingEngine>(new AnalyticEuropeanEngine(bsmProcess)));
+    europeanOption.setPricingEngine(boost::shared_ptr<QuantLib::PricingEngine>(new QuantLib::AnalyticEuropeanEngine(bsmProcess)));
+
+  
+
+    return Number::New(europeanOption.NPV());
+}
+
 Handle<Value> Raptor_Subscribe(const Arguments& args) {
 
     Local<Object> self = args.Holder();
@@ -319,6 +370,8 @@ int main(int argc, char* argv[]) {
     
     raptor_proto->Set("version", FunctionTemplate::New(Raptor_Version));
     raptor_proto->Set("subscribe", FunctionTemplate::New(Raptor_Subscribe));
+
+    raptor_proto->Set("eqtest", FunctionTemplate::New(Equity_Option_01));
 
     Handle<ObjectTemplate> raptor_inst = raptor_templ->InstanceTemplate();
     raptor_inst->SetInternalFieldCount(1);
