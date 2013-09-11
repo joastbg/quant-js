@@ -6,49 +6,83 @@ var a=1;
 // European, Bermudan and American
 
 function OptionParams(optionType, underlyingPrice, strikePrice, dividendYield, riskFreeRate, volatility) { 
-	this.optionType = optionType;
-	this.underlyingPrice = underlyingPrice;
-	this.strikePrice = strikePrice;
-	this.dividendYield = dividendYield;
-	this.riskFreeRate = riskFreeRate;
-	this.volatility = volatility;
+    this.optionType = optionType;
+    this.underlyingPrice = underlyingPrice;
+    this.strikePrice = strikePrice;
+    this.dividendYield = dividendYield;
+    this.riskFreeRate = riskFreeRate;
+    this.volatility = volatility;
 }
 
-// TODO print method
+// Different options, all extend base Option
+
+var Option = function Option(optionKind) {
+    this.optionKind = optionKind;
+}
+
+Option.prototype = {
+    getKind: function getKind() {
+        return this.optionKind;
+    },
+    getParams: function getParams() {
+        return this.optionParams;
+    },
+    setParams: function setParams(optionParams) {
+        this.optionParams = optionParams;
+    }
+}
+
+// 3 supported option types
+var AmericanOption = function AmericanOption() {
+    //this.setParams(new OptionParams(optionType, underlyingPrice, strikePrice, dividendYield, riskFreeRate, volatility));
+}
+AmericanOption.prototype = new Option("American");
+
+
+var EuropeanOption = function EuropeanOption() {
+    //this.setParams(new Option("European", new OptionParams(optionType, underlyingPrice, strikePrice, dividendYield, riskFreeRate, volatility));
+}
+EuropeanOption.prototype = new Option("European");
+
+var BermudanOption = function BermudanOption() {
+    //this.setParams(new OptionParams(optionType, underlyingPrice, strikePrice, dividendYield, riskFreeRate, volatility));
+}
+BermudanOption.prototype = new Option("Bermudan");
 
 // Class definition / PricingEngine
 var PricingEngine = function PricingEngine(method) {
 
-	// Check if method is supported
-	this.methods = ["Black-Scholes", "Heston semi-analytic", "Binomial Trigeorgis"];
+    // Check if method is supported
+    this.methods = ["Black-Scholes", "Heston semi-analytic", "Binomial Trigeorgis"];
 
-	if (method in this.methods) {
-		this.method = method;
-	} else {
-		console.log("Method not supported");
-	}
+    if (method in this.methods) {
+        this.method = method;
+    } else {
+        console.log('Method not supported');
+    }
 }
 
 // Instance methods
 PricingEngine.prototype = {
-	constructor: PricingEngine,
-	calculateNPV: function calculateNPV(optionParams) {
-		if (this.method != null) {
+    constructor: PricingEngine,
+    calculateNPV: function calculateNPV(optionObject) {
+        if (this.method != null) {
 
-			// Just a hack for now, make more robust, method objects and enums etc.
-			console.log(this.methods[this.method]);
+            // Just a hack for now, make more robust, method objects and enums etc.
+            console.log(this.methods[this.method]);
+            console.log(optionObject.getKind());
 
-			return raptor.eqtest(optionParams, this.methods[this.method]);
+            return raptor.eqtest(optionObject.getParams(), this.methods[this.method], optionObject.getKind());
 
-		} else {
-			console.log("Method not specified");
-		}
-	},
-	listMethods: function listMethods() {
-		this.methods.forEach( function(m) {
-			console.log(m);
-		});
-	}
+        } else {
+            console.log('Method not specified');
+        }
+    },
+    listMethods: function listMethods() {
+        this.methods.forEach( function(m) {
+            console.log(m);
+        });
+    }
 }
 
 // var pricingEngine = new PricingEngine(1);
@@ -56,69 +90,80 @@ PricingEngine.prototype = {
 // pricingEngine.calculateNPV(optionParams);
 
 function testNPV(val) {
-	var pricingEngine = new PricingEngine(val);
-	var optionParams = new OptionParams("PUT", 36, 40, 0.00, 0.06, 0.20);
-	return pricingEngine.calculateNPV(optionParams);
+    var pricingEngine = new PricingEngine(2); // Binomial Trigeorgis
+    
+    var europeanOption = new EuropeanOption();
+    europeanOption.setParams(new OptionParams('PUT', 36, 40, 0.00, 0.06, 0.20));
+    pricingEngine.calculateNPV(europeanOption); // 3.843556981971868
+
+    var americanOption = new AmericanOption();
+    americanOption.setParams(new OptionParams('PUT', 36, 40, 0.00, 0.06, 0.20));
+    pricingEngine.calculateNPV(americanOption); // 4.486461065154719
+
+    var bermudanOption = new BermudanOption();
+    bermudanOption.setParams(new OptionParams('PUT', 36, 40, 0.00, 0.06, 0.20));
+    pricingEngine.calculateNPV(bermudanOption); // 4.360909275428335
 }
 
 /*
 function testNPV1() {
-	var pricingEngine = new PricingEngine(0);
-	var optionParams = new OptionParams("PUT", 36, 40, 0.00, 0.06, 0.20);
-	return pricingEngine.calculateNPV(optionParams);
+    var pricingEngine = new PricingEngine(0);
+    var optionParams = new OptionParams("PUT", 36, 40, 0.00, 0.06, 0.20);
+    return pricingEngine.calculateNPV(optionParams);
 }
 
 function testNPV2() {
-	var pricingEngine = new PricingEngine(2);
-	var optionParams = new OptionParams("PUT", 36, 40, 0.00, 0.06, 0.20);
-	return pricingEngine.calculateNPV(optionParams);
+    var pricingEngine = new PricingEngine(2);
+    var optionParams = new OptionParams("PUT", 36, 40, 0.00, 0.06, 0.20);
+    return pricingEngine.calculateNPV(optionParams);
 }
 */
 
 function testParams() {
-	raptor.Print(new OptionParams("PUT", 36, 40, 0.00, 0.06, 0.20));
+    raptor.Print(new OptionParams('PUT', 36, 40, 0.00, 0.06, 0.20));
 
-	// Rough test of running pricing model, simple BS
-	// maturity(17, QuantLib::May, 1999);
-	// QuantLib::Date todaysDate(15, QuantLib::May, 1998);
-	raptor.eqtest(new OptionParams("PUT", 36, 40, 0.00, 0.06, 0.20));
+    // Rough test of running pricing model, simple BS
+    // maturity(17, QuantLib::May, 1999);
+    // QuantLib::Date todaysDate(15, QuantLib::May, 1998);
+    raptor.eqtest(new OptionParams('PUT', 36, 40, 0.00, 0.06, 0.20));
 
 }
 
 // Initialize
 function init() {
-	console.log('Initializing Quant-JS Library, 0.01 Alpha');
+    console.log('Initializing Quant-JS Library, 0.01 Alpha');
 
-	console.log(raptor.version());
+    console.log(raptor.version());
 
-	// Subscribe to market data
-	raptor.subscribe('EUR/USD', tickHandler, function (data, err) {
-		console.log('Successfully subscribed to market data');
-			/*
-			if (err) {
-				console.log("Order Error", err.message);
-			} else {
-				console.log("Order Sent", data.ticket);
-			}*/
-		//});
-	});
+    // Subscribe to market data
+    /*
+    raptor.subscribe('EUR/USD', tickHandler, function (data, err) {
+        console.log('Successfully subscribed to market data');
+            
+            if (err) {
+                console.log("Order Error", err.message);
+            } else {
+                console.log("Order Sent", data.ticket);
+            }
+        //});
+    });*/
 }
 
 function tickHandler(data) {
-	console.log('das');
+    console.log('das');
 
-	//console.log(data.ask);
+    //console.log(data.ask);
 
-	//console.log("Symbol: ", data.symbol, " -- Bid: ", data.bid, " -- Ask: ", data.ask);
+    //console.log("Symbol: ", data.symbol, " -- Bid: ", data.bid, " -- Ask: ", data.ask);
 
-	if (1 == 1) {
-		//OrderSend(Symbol(),OP_BUY,1,Ask,3,Ask-25*Point,Ask+25*Point,"My order #2",16384,0,Green);
-	}
+    if (1 == 1) {
+        //OrderSend(Symbol(),OP_BUY,1,Ask,3,Ask-25*Point,Ask+25*Point,"My order #2",16384,0,Green);
+    }
 }
 
 // Cleanup
 function deinit() {
-	console.log('Cleaning up alog');
+    console.log('Cleaning up alog');
 }
 
 //testParams();

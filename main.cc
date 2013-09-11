@@ -158,10 +158,14 @@ Handle<Value> Equity_Option_01(const Arguments& args)
     }
 
     //// Method for option pricing
-    //if (args[1]-IsString()) {
-        v8::String::AsciiValue pricingMethod(args[1]->ToString());
-        std::cout << "Method: " << *pricingMethod << std::endl;
-    //}
+    v8::String::AsciiValue pricingMethod(args[1]->ToString());
+    std::cout << "Method: " << *pricingMethod << std::endl;
+
+    //// Option kind
+    v8::String::AsciiValue optionKind(args[2]->ToString());
+    std::cout << "Kind: " << *optionKind << std::endl;
+
+    // TODO: Implement check for supported pricing functions for each kind
 
     //// Setup dates
     QuantLib::Calendar calendar = QuantLib::TARGET();
@@ -180,11 +184,26 @@ Handle<Value> Equity_Option_01(const Arguments& args)
     QuantLib::DayCounter dayCounter = QuantLib::Actual365Fixed();
 
     //// Black-Scholes for European
+    // TODO: Don't init all if not used
+
+    std::vector<QuantLib::Date> exerciseDates;
+    for (QuantLib::Integer i=1; i<=4; i++) {
+        exerciseDates.push_back(settlementDate + 3*i*QuantLib::Months);
+    }
+
     boost::shared_ptr<QuantLib::Exercise> europeanExercise(new QuantLib::EuropeanExercise(maturity));
+    
+    boost::shared_ptr<QuantLib::Exercise> bermudanExercise(new QuantLib::BermudanExercise(exerciseDates));
+
+    boost::shared_ptr<QuantLib::Exercise> americanExercise(new QuantLib::AmericanExercise(settlementDate, maturity));
 
     boost::shared_ptr<QuantLib::StrikedTypePayoff> payoff(new QuantLib::PlainVanillaPayoff(type, strike));
 
+   
+
     QuantLib::VanillaOption europeanOption(payoff, europeanExercise);
+    QuantLib::VanillaOption bermudanOption(payoff, bermudanExercise);
+    QuantLib::VanillaOption americanOption(payoff, americanExercise);
 
     QuantLib::Handle<QuantLib::Quote> underlyingH(boost::shared_ptr<QuantLib::Quote>(new QuantLib::SimpleQuote(underlying)));
     QuantLib::Handle<QuantLib::YieldTermStructure> flatTermStructure(boost::shared_ptr<QuantLib::YieldTermStructure>(new QuantLib::FlatForward(settlementDate, riskFreeRate, dayCounter)));
@@ -207,14 +226,30 @@ Handle<Value> Equity_Option_01(const Arguments& args)
         return Number::New(europeanOption.NPV());
 
     } else if (strncmp(*pricingMethod, "Binomial Trigeorgis", strlen("Binomial Trigeorgis") - 1) == 0) {
-         // Binomial Trigeorgis
+        // Binomial Trigeorgis
+        // Works for all three options kinds
+
         QuantLib::Size timeSteps = 801;
-        boost::shared_ptr<QuantLib::BlackScholesMertonProcess> bsmProcess(new QuantLib::BlackScholesMertonProcess(underlyingH, flatDividendTS,flatTermStructure, flatVolTS));
-        europeanOption.setPricingEngine(boost::shared_ptr<QuantLib::PricingEngine>(new QuantLib::BinomialVanillaEngine<QuantLib::Trigeorgis>(bsmProcess, timeSteps)));
-        return Number::New(europeanOption.NPV());
+
+        if (strncmp(*optionKind, "European", strlen("European") - 1) == 0) {
+            boost::shared_ptr<QuantLib::BlackScholesMertonProcess> bsmProcess(new QuantLib::BlackScholesMertonProcess(underlyingH, flatDividendTS,flatTermStructure, flatVolTS));
+            europeanOption.setPricingEngine(boost::shared_ptr<QuantLib::PricingEngine>(new QuantLib::BinomialVanillaEngine<QuantLib::Trigeorgis>(bsmProcess, timeSteps)));
+            return Number::New(europeanOption.NPV());
+        } else if (strncmp(*optionKind, "American", strlen("American") - 1) == 0) {
+            //QuantLib::VanillaOption europeanOption(payoff, europeanExercise);
+            boost::shared_ptr<QuantLib::BlackScholesMertonProcess> bsmProcess(new QuantLib::BlackScholesMertonProcess(underlyingH, flatDividendTS,flatTermStructure, flatVolTS));
+            americanOption.setPricingEngine(boost::shared_ptr<QuantLib::PricingEngine>(new QuantLib::BinomialVanillaEngine<QuantLib::Trigeorgis>(bsmProcess, timeSteps)));
+            return Number::New(americanOption.NPV());
+        } else if (strncmp(*optionKind, "Bermudan", strlen("Bermudan") - 1) == 0) {
+            boost::shared_ptr<QuantLib::BlackScholesMertonProcess> bsmProcess(new QuantLib::BlackScholesMertonProcess(underlyingH, flatDividendTS,flatTermStructure, flatVolTS));
+            bermudanOption.setPricingEngine(boost::shared_ptr<QuantLib::PricingEngine>(new QuantLib::BinomialVanillaEngine<QuantLib::Trigeorgis>(bsmProcess, timeSteps)));
+            return Number::New(bermudanOption.NPV());
+        }
+
+        return Number::New(-1.0);
     }
 
-    return Number::New(1.0);
+    return Number::New(-1.0);
 }
 
 Handle<Value> Raptor_Subscribe(const Arguments& args) {

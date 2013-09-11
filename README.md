@@ -27,13 +27,20 @@ Will price options (European, Bermudan and American) using the following methods
 
 Here's a fully-functional example of how to valuate a European Put option using Quant-JS:
 
-	var pricingEngine = new PricingEngine(0);
-	var optionParams = new OptionParams("PUT", 36, 40, 0.00, 0.06, 0.20);
-	pricingEngine.calculateNPV(optionParams);
+	var pricingEngine = new PricingEngine(2); // Binomial Trigeorgis
+    
+    var europeanOption = new EuropeanOption();
+    europeanOption.setParams(new OptionParams('PUT', 36, 40, 0.00, 0.06, 0.20));
+    pricingEngine.calculateNPV(europeanOption); // 3.843556981971868
 
-This will return:
-	Method: Black-Scholes
-	3.8443077915968398
+    var americanOption = new AmericanOption();
+    americanOption.setParams(new OptionParams('PUT', 36, 40, 0.00, 0.06, 0.20));
+    pricingEngine.calculateNPV(americanOption); // 4.486461065154719
+
+    var bermudanOption = new BermudanOption();
+    bermudanOption.setParams(new OptionParams('PUT', 36, 40, 0.00, 0.06, 0.20));
+    pricingEngine.calculateNPV(bermudanOption); // 4.360909275428335
+
 
 ## Project status ##
 The project is still in early Alpha stage, so there is a lot of missing functionality.
