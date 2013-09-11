@@ -157,6 +157,12 @@ Handle<Value> Equity_Option_01(const Arguments& args)
         }
     }
 
+    //// Method for option pricing
+    //if (args[1]-IsString()) {
+        v8::String::AsciiValue pricingMethod(args[1]->ToString());
+        std::cout << "Method: " << *pricingMethod << std::endl;
+    //}
+
     //// Setup dates
     QuantLib::Calendar calendar = QuantLib::TARGET();
     QuantLib::Date todaysDate(15, QuantLib::May, 1998);
@@ -185,11 +191,30 @@ Handle<Value> Equity_Option_01(const Arguments& args)
     QuantLib::Handle<QuantLib::YieldTermStructure> flatDividendTS(boost::shared_ptr<QuantLib::YieldTermStructure>(new QuantLib::FlatForward(settlementDate, dividendYield, dayCounter)));
     QuantLib::Handle<QuantLib::BlackVolTermStructure> flatVolTS(boost::shared_ptr<QuantLib::BlackVolTermStructure>(new QuantLib::BlackConstantVol(settlementDate, calendar, volatility, dayCounter)));
     
-    boost::shared_ptr<QuantLib::BlackScholesMertonProcess> bsmProcess(new QuantLib::BlackScholesMertonProcess(underlyingH, flatDividendTS,flatTermStructure, flatVolTS));
+    // TODO: Clean up here, and lift to other file/class
 
-    europeanOption.setPricingEngine(boost::shared_ptr<QuantLib::PricingEngine>(new QuantLib::AnalyticEuropeanEngine(bsmProcess)));
+    if (strncmp(*pricingMethod, "Black-Scholes", strlen("Black-Scholes") - 1) == 0) {
+         // Black-Scholes
+        boost::shared_ptr<QuantLib::BlackScholesMertonProcess> bsmProcess(new QuantLib::BlackScholesMertonProcess(underlyingH, flatDividendTS,flatTermStructure, flatVolTS));
+        europeanOption.setPricingEngine(boost::shared_ptr<QuantLib::PricingEngine>(new QuantLib::AnalyticEuropeanEngine(bsmProcess)));
+        return Number::New(europeanOption.NPV());
 
-    return Number::New(europeanOption.NPV());
+    } else if (strncmp(*pricingMethod, "Heston semi-analytic", strlen("Heston semi-analytic") - 1) == 0) {
+        // Heston semi-analytic
+        boost::shared_ptr<QuantLib::HestonProcess> hestonProcess(new QuantLib::HestonProcess(flatTermStructure, flatDividendTS, underlyingH, volatility*volatility, 1.0, volatility*volatility, 0.001, 0.0));
+        boost::shared_ptr<QuantLib::HestonModel> hestonModel(new QuantLib::HestonModel(hestonProcess));
+        europeanOption.setPricingEngine(boost::shared_ptr<QuantLib::PricingEngine>(new QuantLib::AnalyticHestonEngine(hestonModel)));
+        return Number::New(europeanOption.NPV());
+
+    } else if (strncmp(*pricingMethod, "Binomial Trigeorgis", strlen("Binomial Trigeorgis") - 1) == 0) {
+         // Binomial Trigeorgis
+        QuantLib::Size timeSteps = 801;
+        boost::shared_ptr<QuantLib::BlackScholesMertonProcess> bsmProcess(new QuantLib::BlackScholesMertonProcess(underlyingH, flatDividendTS,flatTermStructure, flatVolTS));
+        europeanOption.setPricingEngine(boost::shared_ptr<QuantLib::PricingEngine>(new QuantLib::BinomialVanillaEngine<QuantLib::Trigeorgis>(bsmProcess, timeSteps)));
+        return Number::New(europeanOption.NPV());
+    }
+
+    return Number::New(1.0);
 }
 
 Handle<Value> Raptor_Subscribe(const Arguments& args) {

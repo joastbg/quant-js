@@ -14,23 +14,66 @@ function OptionParams(optionType, underlyingPrice, strikePrice, dividendYield, r
 	this.volatility = volatility;
 }
 
+// TODO print method
+
 // Class definition / PricingEngine
 var PricingEngine = function PricingEngine(method) {
-	// Initialization
-	this.method = method;
+
+	// Check if method is supported
+	this.methods = ["Black-Scholes", "Heston semi-analytic", "Binomial Trigeorgis"];
+
+	if (method in this.methods) {
+		this.method = method;
+	} else {
+		console.log("Method not supported");
+	}
 }
 
 // Instance methods
 PricingEngine.prototype = {
 	constructor: PricingEngine,
-	npv: function npv(optionParams) {
-		return raptor.eqtest(optionParams)
+	calculateNPV: function calculateNPV(optionParams) {
+		if (this.method != null) {
+
+			// Just a hack for now, make more robust, method objects and enums etc.
+			console.log(this.methods[this.method]);
+
+			return raptor.eqtest(optionParams, this.methods[this.method]);
+
+		} else {
+			console.log("Method not specified");
+		}
+	},
+	listMethods: function listMethods() {
+		this.methods.forEach( function(m) {
+			console.log(m);
+		});
 	}
 }
 
 // var pricingEngine = new PricingEngine(1);
 // var optionParams = new OptionParams("PUT", 36, 40, 0.00, 0.06, 0.20);
-// pricingEngine.npv(optionParams);
+// pricingEngine.calculateNPV(optionParams);
+
+function testNPV(val) {
+	var pricingEngine = new PricingEngine(val);
+	var optionParams = new OptionParams("PUT", 36, 40, 0.00, 0.06, 0.20);
+	return pricingEngine.calculateNPV(optionParams);
+}
+
+/*
+function testNPV1() {
+	var pricingEngine = new PricingEngine(0);
+	var optionParams = new OptionParams("PUT", 36, 40, 0.00, 0.06, 0.20);
+	return pricingEngine.calculateNPV(optionParams);
+}
+
+function testNPV2() {
+	var pricingEngine = new PricingEngine(2);
+	var optionParams = new OptionParams("PUT", 36, 40, 0.00, 0.06, 0.20);
+	return pricingEngine.calculateNPV(optionParams);
+}
+*/
 
 function testParams() {
 	raptor.Print(new OptionParams("PUT", 36, 40, 0.00, 0.06, 0.20));
@@ -78,4 +121,4 @@ function deinit() {
 	console.log('Cleaning up alog');
 }
 
-testParams();
+//testParams();
