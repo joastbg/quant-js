@@ -70,6 +70,85 @@ class Console {
         }
 };
 
+v8::Handle<v8::Value> exit(const v8::Arguments& args)
+{
+    // Hack to exit app
+    exit(0);
+}
+
+v8::Handle<v8::Value> log10(const v8::Arguments& args)
+{
+    // Returns the common (base-10) logarithm of x
+
+    v8::String::AsciiValue argStr(args[0]->ToString());
+    //std::cout << *argStr << std::endl;
+    double arg = atof(*argStr);
+
+    //v8::String::AsciiValue arg2(args[0]->ToString());
+    //std::cout << *arg1 << std::endl;
+
+    return Number::New(log10(arg));
+}
+
+v8::Handle<v8::Value> log(const v8::Arguments& args)
+{
+    // Returns the natural logarithm of x
+
+    v8::String::AsciiValue argStr(args[0]->ToString());
+    //std::cout << *argStr << std::endl;
+    double arg = atof(*argStr);
+
+    //v8::String::AsciiValue arg2(args[0]->ToString());
+    //std::cout << *arg1 << std::endl;
+
+    return Number::New(log(arg));
+}
+
+v8::Handle<v8::Value> sin(const v8::Arguments& args)
+{
+    // Returns the natural logarithm of x
+
+    v8::String::AsciiValue argStr(args[0]->ToString());
+    //std::cout << *argStr << std::endl;
+    double arg = atof(*argStr);
+
+    //v8::String::AsciiValue arg2(args[0]->ToString());
+    //std::cout << *arg1 << std::endl;
+
+    return Number::New(sin(arg));
+}
+
+v8::Handle<v8::Value> cos(const v8::Arguments& args)
+{
+    // Returns the natural logarithm of x
+
+    v8::String::AsciiValue argStr(args[0]->ToString());
+    //std::cout << *argStr << std::endl;
+    double arg = atof(*argStr);
+
+    //v8::String::AsciiValue arg2(args[0]->ToString());
+    //std::cout << *arg1 << std::endl;
+
+    return Number::New(cos(arg));
+}
+
+v8::Handle<v8::Value> tan(const v8::Arguments& args)
+{
+    // Returns the natural logarithm of x
+
+    v8::String::AsciiValue argStr(args[0]->ToString());
+    //std::cout << *argStr << std::endl;
+    double arg = atof(*argStr);
+
+    //v8::String::AsciiValue arg2(args[0]->ToString());
+    //std::cout << *arg1 << std::endl;
+
+    return Number::New(tan(arg));
+}
+
+
+
+
 Handle<Value> ConsoleMethod_Log(const Arguments& args)
 {
     Local<Object> self = args.Holder();
@@ -311,7 +390,7 @@ int main(int argc, char* argv[]) {
     //// Raptor
     
     Handle<FunctionTemplate> raptor_templ = FunctionTemplate::New();
-    raptor_templ->SetClassName(String::New("RaptorAPI"));
+    raptor_templ->SetClassName(String::New("QuantJS API"));
     
     Handle<ObjectTemplate> raptor_proto = raptor_templ->PrototypeTemplate();
     
@@ -321,6 +400,17 @@ int main(int argc, char* argv[]) {
     raptor_proto->Set("Print", FunctionTemplate::New(Print));
     raptor_proto->Set("eqtest", FunctionTemplate::New(Equity_Option_01));
 
+    //// Math functions
+    raptor_proto->Set("log", FunctionTemplate::New(log));
+    raptor_proto->Set("log10", FunctionTemplate::New(log10));
+    raptor_proto->Set("sin", FunctionTemplate::New(log10));
+    raptor_proto->Set("cos", FunctionTemplate::New(log10));
+    raptor_proto->Set("tan", FunctionTemplate::New(log10));
+
+    // TODO: Ask before exit
+    raptor_proto->Set("exit", FunctionTemplate::New(exit));    
+
+
     Handle<ObjectTemplate> raptor_inst = raptor_templ->InstanceTemplate();
     raptor_inst->SetInternalFieldCount(1);
 
@@ -328,7 +418,7 @@ int main(int argc, char* argv[]) {
     Handle<Function> raptor_ctor = raptor_templ->GetFunction();
     Local<Object> raptor_obj = raptor_ctor->NewInstance();
     raptor_obj->SetInternalField(0, External::New(raptor));
-    context->Global()->Set(String::New("raptor"), raptor_obj);
+    context->Global()->Set(String::New("quantjs"), raptor_obj);
 
     //// Read source from file
     Handle<String> source = String::New(sstream.str().c_str());
@@ -345,7 +435,7 @@ int main(int argc, char* argv[]) {
   
     Handle<Value> js_result = func->Call(context->Global(), 0, args);
 
-    v8::Local<v8::String> name(v8::String::New("raptor"));
+    v8::Local<v8::String> name(v8::String::New("quantjs"));
 
     while (true) {
         char buffer[256];

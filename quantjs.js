@@ -5,6 +5,33 @@ var a=1;
 // PricingEngine, various pricing methods, then do engine.npv(new OptionParams(...))
 // European, Bermudan and American
 
+/// Wrapper to make functions global, ie motivated by log, mixup with console.log otherwise
+function log(n) {
+    return quantjs.log(n);
+}
+
+function log10(n) {
+    return quantjs.log10(n);
+}
+
+function log2(n) {
+    // TODO: Implement this in C++
+    return quantjs.log(n) / quantjs.log(2);
+}
+
+function sin(n) {
+    return quantjs.sin(n);
+}
+
+function cos(n) {
+    return quantjs.cos(n);
+}
+
+function tan(n) {
+    return quantjs.tan(n);
+}
+
+
 function OptionParams(optionType, underlyingPrice, strikePrice, dividendYield, riskFreeRate, volatility) { 
     this.optionType = optionType;
     this.underlyingPrice = underlyingPrice;
@@ -72,7 +99,7 @@ PricingEngine.prototype = {
             console.log(this.methods[this.method]);
             console.log(optionObject.getKind());
 
-            return raptor.eqtest(optionObject.getParams(), this.methods[this.method], optionObject.getKind());
+            return quantjs.eqtest(optionObject.getParams(), this.methods[this.method], optionObject.getKind());
 
         } else {
             console.log('Method not specified');
@@ -120,12 +147,12 @@ function testNPV2() {
 */
 
 function testParams() {
-    raptor.Print(new OptionParams('PUT', 36, 40, 0.00, 0.06, 0.20));
+    quantjs.Print(new OptionParams('PUT', 36, 40, 0.00, 0.06, 0.20));
 
     // Rough test of running pricing model, simple BS
     // maturity(17, QuantLib::May, 1999);
     // QuantLib::Date todaysDate(15, QuantLib::May, 1998);
-    raptor.eqtest(new OptionParams('PUT', 36, 40, 0.00, 0.06, 0.20));
+    quantjs.eqtest(new OptionParams('PUT', 36, 40, 0.00, 0.06, 0.20));
 
 }
 
@@ -133,7 +160,7 @@ function testParams() {
 function init() {
     console.log('Initializing Quant-JS Library, 0.01 Alpha');
 
-    console.log(raptor.version());
+    console.log(quantjs.version());
 
     // Subscribe to market data
     /*
