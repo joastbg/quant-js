@@ -2,6 +2,8 @@ var a=1;
 
 // TODO: Adapt for QuantLib
 // Add Option object, with parameters, then send to various pricing functions
+// PricingEngine, various pricing methods, then do engine.npv(new OptionParams(...))
+// European, Bermudan and American
 
 function OptionParams(optionType, underlyingPrice, strikePrice, dividendYield, riskFreeRate, volatility) { 
 	this.optionType = optionType;
@@ -12,8 +14,26 @@ function OptionParams(optionType, underlyingPrice, strikePrice, dividendYield, r
 	this.volatility = volatility;
 }
 
+// Class definition / PricingEngine
+var PricingEngine = function PricingEngine(method) {
+	// Initialization
+	this.method = method;
+}
+
+// Instance methods
+PricingEngine.prototype = {
+	constructor: PricingEngine,
+	npv: function npv(optionParams) {
+		return raptor.eqtest(optionParams)
+	}
+}
+
+// var pricingEngine = new PricingEngine(1);
+// var optionParams = new OptionParams("PUT", 36, 40, 0.00, 0.06, 0.20);
+// pricingEngine.npv(optionParams);
+
 function testParams() {
-	Print(new OptionParams("PUT", 36, 40, 0.00, 0.06, 0.20));
+	raptor.Print(new OptionParams("PUT", 36, 40, 0.00, 0.06, 0.20));
 
 	// Rough test of running pricing model, simple BS
 	// maturity(17, QuantLib::May, 1999);
