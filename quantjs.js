@@ -87,7 +87,7 @@ function testParams() {
 
 // Initialize
 function init() {
-	console.log('Initializing algo APAN');
+	console.log('Initializing Quant-JS Library, 0.01 Alpha');
 
 	console.log(raptor.version());
 

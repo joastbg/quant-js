@@ -82,7 +82,7 @@ Handle<Value> ConsoleMethod_Log(const Arguments& args)
 
 class RaptorAPI {
     public:
-        RaptorAPI() : version("Raptor 0.02") {};
+        RaptorAPI() : version("Quant-JS Engine, 0.01 Alpha") {};
     
         std::string& Version() {
             return version;
