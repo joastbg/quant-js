@@ -11,6 +11,8 @@
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
+#include <boost/thread/thread.hpp>
+
 #include <ql/quantlib.hpp>
 
 using namespace v8;
@@ -144,6 +146,45 @@ v8::Handle<v8::Value> tan(const v8::Arguments& args)
     //std::cout << *arg1 << std::endl;
 
     return Number::New(tan(arg));
+}
+
+v8::Handle<v8::Value> sleep(const v8::Arguments& args)
+{
+    // Returns the natural logarithm of x
+
+    v8::String::AsciiValue argStr(args[0]->ToString());
+    //std::cout << *argStr << std::endl;
+    int msecs = atoi(*argStr);
+
+    boost::this_thread::sleep(boost::posix_time::milliseconds(msecs));
+
+    //v8::String::AsciiValue arg2(args[0]->ToString());
+    //std::cout << *arg1 << std::endl;
+
+    return v8::Undefined();
+}
+
+v8::Handle<v8::Value> timems(const v8::Arguments& args)
+{
+    // Returns the natural logarithm of x
+
+    //v8::String::AsciiValue argStr(args[0]->ToString());
+    //std::cout << *argStr << std::endl;
+    //int msecs = atoi(*argStr);
+
+    //boost::this_thread::sleep(boost::posix_time::milliseconds(msecs));
+
+    //boost::posix_time::ptime t = boost::posix_time::microsec_clock::universal_time();
+
+    //v8::String::AsciiValue arg2(args[0]->ToString());
+    //std::cout << *arg1 << std::endl;
+
+    boost::posix_time::ptime epoch = boost::posix_time::time_from_string("1970-01-01 00:00:00.000");
+    boost::posix_time::ptime other = boost::posix_time::microsec_clock::universal_time();
+
+    long diff = (other-epoch).total_milliseconds();
+
+    return Number::New(diff);
 }
 
 
@@ -407,8 +448,11 @@ int main(int argc, char* argv[]) {
     raptor_proto->Set("cos", FunctionTemplate::New(log10));
     raptor_proto->Set("tan", FunctionTemplate::New(log10));
 
+    raptor_proto->Set("sleep", FunctionTemplate::New(sleep));
+    raptor_proto->Set("timems", FunctionTemplate::New(timems));
+
     // TODO: Ask before exit
-    raptor_proto->Set("exit", FunctionTemplate::New(exit));    
+    raptor_proto->Set("exit", FunctionTemplate::New(exit));
 
 
     Handle<ObjectTemplate> raptor_inst = raptor_templ->InstanceTemplate();

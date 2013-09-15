@@ -31,6 +31,23 @@ function tan(n) {
     return quantjs.tan(n);
 }
 
+function time(fun) {
+    // Will meassure execution time
+    var start = quantjs.timems();
+    fun();
+    var end = quantjs.timems();
+
+    return end - start;
+}
+
+function sleep(ms) {
+    // Will sleep in ms
+}
+
+function exit() {
+    quantjs.exit();
+}
+
 
 function OptionParams(optionType, underlyingPrice, strikePrice, dividendYield, riskFreeRate, volatility) { 
     this.optionType = optionType;

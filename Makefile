@@ -4,7 +4,7 @@ CXXFLAGS += -pthread -Iinclude -I/opt/local/include/ -L/opt/local/lib/ -lQuantLi
 
 # Define what to do when make is executed without arguments.
 all: quantjs
-	g++ -o quantjs -pthread main.o libv8.a  -L. -lv8 -Iinclude -I/opt/local/include/ -L/opt/local/lib/ -lQuantLib
+	g++ -o quantjs -pthread main.o libv8.a -L. -lv8 -Iinclude -I/opt/local/include/ -L/opt/local/lib/ -lQuantLib -lboost_thread -lboost_date_time
 quantjs: main.o
 
 # Define the rules for the object files.
