@@ -49,10 +49,11 @@ function exit() {
 }
 
 
-function OptionParams(optionType, underlyingPrice, strikePrice, dividendYield, riskFreeRate, volatility) { 
+function OptionParams(optionType, underlyingPrice, strikePrice, timeToMaturity, dividendYield, riskFreeRate, volatility) { 
     this.optionType = optionType;
     this.underlyingPrice = underlyingPrice;
     this.strikePrice = strikePrice;
+    this.timeToMaturity = timeToMaturity;
     this.dividendYield = dividendYield;
     this.riskFreeRate = riskFreeRate;
     this.volatility = volatility;
@@ -134,19 +135,22 @@ PricingEngine.prototype = {
 // pricingEngine.calculateNPV(optionParams);
 
 function testNPV(val) {
-    var pricingEngine = new PricingEngine(2); // Binomial Trigeorgis
+    var pricingEngine = new PricingEngine(0); // BS
     
     var europeanOption = new EuropeanOption();
-    europeanOption.setParams(new OptionParams('PUT', 36, 40, 0.00, 0.06, 0.20));
-    pricingEngine.calculateNPV(europeanOption); // 3.843556981971868
-
+    europeanOption.setParams(new OptionParams('PUT', 36, 40, 0.5, 0.00, 0.06, 0.20));
+    var t = pricingEngine.calculateNPV(europeanOption); // 3.843556981971868
+    console.log(t);
+/*
     var americanOption = new AmericanOption();
-    americanOption.setParams(new OptionParams('PUT', 36, 40, 0.00, 0.06, 0.20));
+    americanOption.setParams(new OptionParams('PUT', 36, 40, 0.5, 0.00, 0.06, 0.20));
     pricingEngine.calculateNPV(americanOption); // 4.486461065154719
 
     var bermudanOption = new BermudanOption();
-    bermudanOption.setParams(new OptionParams('PUT', 36, 40, 0.00, 0.06, 0.20));
-    pricingEngine.calculateNPV(bermudanOption); // 4.360909275428335
+    bermudanOption.setParams(new OptionParams('PUT', 36, 40, 0.5, 0.00, 0.06, 0.20));
+    var t = pricingEngine.calculateNPV(bermudanOption); // 4.360909275428335
+    console.log(t);
+*/
 }
 
 /*
@@ -164,12 +168,12 @@ function testNPV2() {
 */
 
 function testParams() {
-    quantjs.Print(new OptionParams('PUT', 36, 40, 0.00, 0.06, 0.20));
+    quantjs.Print(new OptionParams('PUT', 36, 40, 0.5, 0.00, 0.06, 0.20));
 
     // Rough test of running pricing model, simple BS
     // maturity(17, QuantLib::May, 1999);
     // QuantLib::Date todaysDate(15, QuantLib::May, 1998);
-    quantjs.eqtest(new OptionParams('PUT', 36, 40, 0.00, 0.06, 0.20));
+    quantjs.eqtest(new OptionParams('PUT', 36, 40, 0.5, 0.00, 0.06, 0.20));
 
 }
 

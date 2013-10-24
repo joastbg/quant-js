@@ -229,6 +229,7 @@ Handle<Value> Equity_Option_01(const Arguments& args)
 {
     double underlyingDouble = 0.0;
     double strikeDouble = 0.0;
+    double timeToMaturityYears = 0.0;
     double dividendYieldDouble = 0.0;
     double riskFreeRateDouble = 0.0;
     double volatilityDouble = 0.0;
@@ -240,6 +241,7 @@ Handle<Value> Equity_Option_01(const Arguments& args)
         Handle<Value> optionType = object->Get(String::New("optionType"));
         Handle<Value> underlyingPrice = object->Get(String::New("underlyingPrice"));
         Handle<Value> strikePrice = object->Get(String::New("strikePrice"));
+        Handle<Value> timeToMaturity = object->Get(String::New("timeToMaturity"));
         Handle<Value> dividendYield = object->Get(String::New("dividendYield"));
         Handle<Value> riskFreeRate = object->Get(String::New("riskFreeRate"));
         Handle<Value> volatility = object->Get(String::New("volatility"));
@@ -256,6 +258,12 @@ Handle<Value> Equity_Option_01(const Arguments& args)
             Handle<Number> strikePriceNum = Handle<Number>::Cast(strikePrice);
             v8::String::AsciiValue testValue(strikePriceNum->ToString());
             strikeDouble = atof(*testValue);
+        }
+
+        if (timeToMaturity->IsNumber()) {
+            Handle<Number> timeToMaturityNum = Handle<Number>::Cast(timeToMaturity);
+            v8::String::AsciiValue testValue(timeToMaturityNum->ToString());
+            timeToMaturityYears = atof(*testValue);
         }
 
         if (dividendYield->IsNumber()) {
@@ -289,8 +297,8 @@ Handle<Value> Equity_Option_01(const Arguments& args)
 
     //// Setup dates
     QuantLib::Calendar calendar = QuantLib::TARGET();
-    QuantLib::Date todaysDate(15, QuantLib::May, 1998);
-    QuantLib::Date settlementDate(17, QuantLib::May, 1998);
+    QuantLib::Date todaysDate = QuantLib::Date::todaysDate(); //todaysDate(24, QuantLib::October, 2013);
+    QuantLib::Date settlementDate = QuantLib::Date::todaysDate(); //(24, QuantLib::October, 2013);
     QuantLib::Settings::instance().evaluationDate() = todaysDate;
 
     //// The options
@@ -300,7 +308,10 @@ Handle<Value> Equity_Option_01(const Arguments& args)
     QuantLib::Spread dividendYield = dividendYieldDouble;
     QuantLib::Rate riskFreeRate = riskFreeRateDouble;
     QuantLib::Volatility volatility = volatilityDouble;
-    QuantLib::Date maturity(17, QuantLib::May, 1999);
+    // 2013-10-18
+    //QuantLib::Date maturity(18, QuantLib::November, 2013);
+    QuantLib::Date maturity = QuantLib::Date::todaysDate();
+    maturity += 365 * timeToMaturityYears * QuantLib::Days;
     QuantLib::DayCounter dayCounter = QuantLib::Actual365Fixed();
 
     //// Black-Scholes for European
@@ -318,8 +329,6 @@ Handle<Value> Equity_Option_01(const Arguments& args)
     boost::shared_ptr<QuantLib::Exercise> americanExercise(new QuantLib::AmericanExercise(settlementDate, maturity));
 
     boost::shared_ptr<QuantLib::StrikedTypePayoff> payoff(new QuantLib::PlainVanillaPayoff(type, strike));
-
-   
 
     QuantLib::VanillaOption europeanOption(payoff, europeanExercise);
     QuantLib::VanillaOption bermudanOption(payoff, bermudanExercise);
