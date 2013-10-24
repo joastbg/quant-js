@@ -25,13 +25,13 @@ Will price options (European, Bermudan and American) using the following methods
 
 ## Getting started ##
 
-Here's a fully-functional example of how to valuate a European Put option using Quant-JS:
+Here's a fully-functional example of how to valuate three different put options using Quant-JS:
 
     // Calculation date is today's date
 	var pricingEngine = new PricingEngine(2); // Binomial Trigeorgis
     
     // Params: optionType, underlyingPrice, strikePrice, timeToMaturity, dividendYield, riskFreeRate, volatility
-    
+
     var europeanOption = new EuropeanOption();
     europeanOption.setParams(new OptionParams('PUT', 36, 40, 0.5, 0.00, 0.06, 0.20));
     pricingEngine.calculateNPV(europeanOption); // 3.843556981971868
