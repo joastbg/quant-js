@@ -25,6 +25,20 @@ Will price options (European, Bermudan and American) using the following methods
 
 ## Getting started ##
 
+You need the following to be able to compile quant-js (yum package names):
+- QuantLib (QuantLib-devel)
+- Boost libraries (boost-devel)
+- Google V8 (v8-devel)
+- Optional: rlwrap (wrapper for readline)
+
+Build binary:
+# make
+
+Run quantjs
+# rlwrap -p'1;33' -m ./quantjs quantjs.js underscore.js
+
+The file quantjs.js is a JavaScript library to hide some implementation details and open for use of other JavaScript libraries as well. 
+
 Here's a fully-functional example of how to valuate three different put options using Quant-JS:
 
     // Calculation date is today's date
