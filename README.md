@@ -32,9 +32,11 @@ You need the following to be able to compile quant-js (yum package names):
 - Optional: rlwrap (wrapper for readline)
 
 Build binary:
+
     $ make
 
-Run quantjs
+Run quantjs:
+
     $ rlwrap -p'1;33' -m ./quantjs quantjs.js underscore.js
 
 The file quantjs.js is a JavaScript library to hide some implementation details and open for use of other JavaScript libraries as well. 
