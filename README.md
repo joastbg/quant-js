@@ -38,6 +38,39 @@ Build binary:
 Run quantjs:
 
     $ rlwrap -p'1;33' -m ./quantjs quantjs.js underscore.js
+    
+Example features:
+
+    qjs> var pricingEngine = new PricingEngine(0) // BS
+    qjs> var europeanOption = new EuropeanOption()
+    qjs> europeanOption.setParams(new OptionParams('PUT', 36, 40, 0.5, 0.00, 0.06, 0.20))
+    qjs> var t = pricingEngine.calculateNPV(europeanOption)
+    qjs> t
+    	3.8094
+
+    qjs> var m1 = ident(5)
+    qjs> m1
+    	[0]	1 0 0 0 0 
+    	[1]	0 1 0 0 0 
+    	[2]	0 0 1 0 0 
+    	[3]	0 0 0 1 0 
+    	[4]	0 0 0 0 1 
+    qjs> numeric.det(m1)
+    	1.0000
+    	
+    qjs> var v = _.range(10).map(function(n) { return n; });
+    qjs> v
+    	[0]	0
+    	[1]	1
+    	[2]	2
+    	[3]	3
+    	[4]	4
+    	[5]	5
+    	[6]	6
+    	[7]	7
+    	[8]	8
+    	[9]	9
+
 
 The file quantjs.js is a JavaScript library to hide some implementation details and open for use of other JavaScript libraries as well. 
 
