@@ -37,7 +37,7 @@ Build binary:
 
 Run quantjs:
 
-    $ rlwrap -p'1;33' -m ./quantjs quantjs.js underscore.js
+    $ rlwrap -p'1;33' -m ./quantjs --infiles quantjs.js
     
 Example features:
 
