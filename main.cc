@@ -4,6 +4,8 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <string.h>
+#include <string>
+#include <vector>
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -12,6 +14,17 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 #include <boost/thread/thread.hpp>
+
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/normal_distribution.hpp>
+#include <boost/random/variate_generator.hpp>
+#include <boost/generator_iterator.hpp>
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/uniform_real_distribution.hpp>
+
+typedef boost::mt19937                                      T_base_prng;
+typedef boost::normal_distribution<>                        T_norm_dist;
+typedef boost::variate_generator<T_base_prng&, T_norm_dist> T_norm_varg;
 
 #include <ql/quantlib.hpp>
 
@@ -150,6 +163,14 @@ v8::Handle<v8::Value> tan(const v8::Arguments& args)
     //std::cout << *arg1 << std::endl;
 
     return Number::New(tan(arg));
+}
+
+boost::random::mt19937 gen;
+boost::random::uniform_real_distribution<> dist(0, 1);
+
+v8::Handle<v8::Value> randfloat(const v8::Arguments& args)
+{
+    return Number::New(dist(gen));
 }
 
 v8::Handle<v8::Value> sleep(const v8::Arguments& args)
@@ -526,6 +547,8 @@ void ARCore::run() {
     raptor_proto->Set("sleep", FunctionTemplate::New(sleep));
     raptor_proto->Set("timems", FunctionTemplate::New(timems));
 
+    raptor_proto->Set("rnd", FunctionTemplate::New(randfloat));
+
     // TODO: Ask before exit
     raptor_proto->Set("exit", FunctionTemplate::New(exit));
 
@@ -547,47 +570,55 @@ void ARCore::run() {
 
 	///////////
 
+	std::vector<std::string> files;
+	files.push_back("quantjs.js");
 
-	v8::Handle<v8::String> source = ReadFile("quantjs.js");
-	v8::Handle<v8::String> source2 = ReadFile("underscore-min.js");
+	// http://underscorejs.org/
+	files.push_back("underscore-min.js");
+	
+	// http://numericjs.com/documentation.html
+	files.push_back("numeric-1.2.6.min.js");
 
-
-	//// Compile the source code.
-	Handle<Script> script = Script::Compile(source);
-	Handle<Script> script2 = Script::Compile(source2);
-
-	//// Run the script to get the result.
-	Handle<Value> result = script->Run();
-	Handle<Value> result2 = script2->Run();
-
+	for (int i=0;i<files.size();i++) {
+		v8::Handle<v8::String> source = ReadFile(files[i].c_str());
+		Handle<Script> script = Script::Compile(source);
+		Handle<Value> result = script->Run();
+	}
+		
     Handle<Value> befunc = context->Global()->Get(String::New("init"));
     Handle<Function> func = Handle<Function>::Cast(befunc);
     Handle<Value> args[0];
 
     Handle<Value> js_result = func->Call(context->Global(), 0, args);	
 
-	raptor_proto->Set("print", FunctionTemplate::New(Print));
-//	context->Global()->Set(String::New("print"), FunctionTemplate::New(Print2));
-
 	bool print_result = true;
 
 	while (true) {
         char buffer[256];
-        printf("> ");
+        printf("qjs> ");
         char* str = fgets(buffer, 256, stdin);
         if (str == NULL) break;
         v8::HandleScope handle_scope;
+		v8::TryCatch try_catch;
 
         Handle<Script> script = Script::Compile(String::New(str), String::New("quantjs"));
 
 		if (!script.IsEmpty()) {
+
 	        v8::Handle<v8::Value> result = script->Run();
+
+			v8::String::Utf8Value exception(try_catch.Exception());
+	  		const char* exception_string = ToCString(exception);
+			v8::Handle<v8::Message> message = try_catch.Message();		
+			if (!message.IsEmpty()) {
+				fprintf(stderr, "%s\n", exception_string);
+			}
 
 	        //String::Utf8Value str2(result);
 	        //const char* cstr = ToCString(str2);
         	//printf("%s\n", cstr);
 
-			if (print_result && !result->IsUndefined()) {
+			if (!result.IsEmpty() && print_result && !result->IsUndefined()) {
 				
 				if (result->IsArray()) {
 
@@ -604,8 +635,8 @@ void ARCore::run() {
 						if (v8_value->IsArray()) {
 							v8::Local<v8::Array> arrayInside = v8::Local<v8::Array>::Cast(v8_value->ToObject());
 							printf("\t[%u]\t", i);
-							for (unsigned int i = 0; i < arrayInside->Length(); ++i) {
-								v8::Local<v8::Value> v8_valueInside = arrayInside->Get(i);
+							for (unsigned int j = 0; j < arrayInside->Length(); ++j) {
+								v8::Local<v8::Value> v8_valueInside = arrayInside->Get(j);
 								v8::String::Utf8Value valueInside(v8_valueInside->ToDetailString());
 								printf("%s ", *valueInside);
 							}
@@ -616,6 +647,11 @@ void ARCore::run() {
 							printf("\t[%u]\t%s\n", i, *value);
 						}
 					}
+
+				} else if (result->IsNumber()) {
+					v8::Local<v8::Number> number = result->ToNumber();
+
+					printf("\t%4.4f\n", number->NumberValue());
 
 				} else if (result->IsObject()) {
 					v8::Local<v8::Object> object = result->ToObject();

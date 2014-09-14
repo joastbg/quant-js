@@ -138,7 +138,7 @@ PricingEngine.prototype = {
 // var optionParams = new OptionParams("PUT", 36, 40, 0.00, 0.06, 0.20);
 // pricingEngine.calculateNPV(optionParams);
 
-function testNPV(val) {
+function testNPV() {
     var pricingEngine = new PricingEngine(0); // BS
     
     var europeanOption = new EuropeanOption();
@@ -238,6 +238,6 @@ function ident(size) {
 }
 
 function mrand(size) {
-	return _.range(size).map(function(n) { return _.range(size).map(function(m) { return 0.314863; }); });
+	return _.range(size).map(function(n) { return _.range(size).map(function(m) { return quantjs.rnd(); }); });
 }
 
