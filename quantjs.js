@@ -5,6 +5,10 @@ var a=1;
 // PricingEngine, various pricing methods, then do engine.npv(new OptionParams(...))
 // European, Bermudan and American
 
+function fromjs() {
+	return "quantjs";
+}
+
 /// Wrapper to make functions global, ie motivated by log, mixup with console.log otherwise
 function log(n) {
     return quantjs.log(n);
@@ -183,6 +187,11 @@ function init() {
 
     console.log(quantjs.version());
 
+	// load libs
+	quantjs.load("underscore-min.js");
+
+	// _.reduce([1, 2, 3], function(memo, num){ return memo + num; }, 0);
+
     // Subscribe to market data
     /*
     raptor.subscribe('EUR/USD', tickHandler, function (data, err) {
@@ -215,3 +224,20 @@ function deinit() {
 }
 
 //testParams();
+
+function testmatrix() {
+	var matrix = [];
+	for(var i=0; i<9; i++) {
+    	matrix[i] = new Array(9);
+	}
+	return matrix;
+}
+
+function ident(size) {
+	return _.range(size).map(function(n) { return _.range(size).map(function(m) { return n==m?1:0; }); });
+}
+
+function mrand(size) {
+	return _.range(size).map(function(n) { return _.range(size).map(function(m) { return 0.314863; }); });
+}
+

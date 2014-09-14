@@ -1,4 +1,4 @@
-#include <v8.h> 
+#include <v8.h>
 #include <iostream>
 #include <fstream>
 #include <assert.h>
@@ -14,6 +14,8 @@
 #include <boost/thread/thread.hpp>
 
 #include <ql/quantlib.hpp>
+
+#include "options.h"
 
 using namespace v8;
 using namespace boost::gregorian;
@@ -66,9 +68,11 @@ v8::Handle<v8::Value> Print(const v8::Arguments& args) {
 
 class Console {
     public:
-        void Log(v8::Local<v8::String> str) {
+        v8::Handle<v8::Value> Log(v8::Local<v8::String> str) {
             v8::String::AsciiValue astr(str);
             std::cout << to_iso_extended_string(microsec_clock::local_time()) << " INFO\t- " << *astr << std::endl;
+
+			return v8::Undefined();
         }
 };
 
@@ -164,6 +168,23 @@ v8::Handle<v8::Value> sleep(const v8::Arguments& args)
     return v8::Undefined();
 }
 
+
+v8::Handle<v8::Value> load(const v8::Arguments& args)
+{
+    // Returns the natural logarithm of x
+
+    v8::String::AsciiValue argStr(args[0]->ToString());
+    std::cout << "Supposed to load this: " << *argStr << std::endl;
+    //int msecs = atoi(*argStr);
+
+    //boost::this_thread::sleep(boost::posix_time::milliseconds(msecs));
+
+    //v8::String::AsciiValue arg2(args[0]->ToString());
+    //std::cout << *arg1 << std::endl;
+
+    return v8::Undefined();
+}
+
 v8::Handle<v8::Value> timems(const v8::Arguments& args)
 {
     // Returns the natural logarithm of x
@@ -190,7 +211,7 @@ v8::Handle<v8::Value> timems(const v8::Arguments& args)
 
 
 
-Handle<Value> ConsoleMethod_Log(const Arguments& args)
+v8::Handle<Value> ConsoleMethod_Log(const Arguments& args)
 {
     Local<Object> self = args.Holder();
     Local<External> wrap = Local<External>::Cast(self->GetInternalField(0));
@@ -203,7 +224,7 @@ Handle<Value> ConsoleMethod_Log(const Arguments& args)
 class RaptorAPI {
     public:
         RaptorAPI() : version("Quant-JS Engine, 0.01 Alpha") {};
-    
+
         std::string& Version() {
             return version;
         }
@@ -221,7 +242,7 @@ Handle<Value> Raptor_Version(const Arguments& args)
     Local<Object> self = args.Holder();
     Local<External> wrap = Local<External>::Cast(self->GetInternalField(0));
     void* ptr = wrap->Value();
-        
+
     return v8::String::New(static_cast<RaptorAPI*>(ptr)->Version().c_str());
 }
 
@@ -323,7 +344,7 @@ Handle<Value> Equity_Option_01(const Arguments& args)
     }
 
     boost::shared_ptr<QuantLib::Exercise> europeanExercise(new QuantLib::EuropeanExercise(maturity));
-    
+
     boost::shared_ptr<QuantLib::Exercise> bermudanExercise(new QuantLib::BermudanExercise(exerciseDates));
 
     boost::shared_ptr<QuantLib::Exercise> americanExercise(new QuantLib::AmericanExercise(settlementDate, maturity));
@@ -338,7 +359,7 @@ Handle<Value> Equity_Option_01(const Arguments& args)
     QuantLib::Handle<QuantLib::YieldTermStructure> flatTermStructure(boost::shared_ptr<QuantLib::YieldTermStructure>(new QuantLib::FlatForward(settlementDate, riskFreeRate, dayCounter)));
     QuantLib::Handle<QuantLib::YieldTermStructure> flatDividendTS(boost::shared_ptr<QuantLib::YieldTermStructure>(new QuantLib::FlatForward(settlementDate, dividendYield, dayCounter)));
     QuantLib::Handle<QuantLib::BlackVolTermStructure> flatVolTS(boost::shared_ptr<QuantLib::BlackVolTermStructure>(new QuantLib::BlackConstantVol(settlementDate, calendar, volatility, dayCounter)));
-    
+
     // TODO: Clean up here, and lift to other file/class
 
     if (strncmp(*pricingMethod, "Black-Scholes", strlen("Black-Scholes") - 1) == 0) {
@@ -386,9 +407,9 @@ Handle<Value> Raptor_Subscribe(const Arguments& args) {
     Local<Object> self = args.Holder();
     Local<External> wrap = Local<External>::Cast(self->GetInternalField(0));
     void* ptr = wrap->Value();
-    
-    static_cast<RaptorAPI*>(ptr)->Subscribe();  
-    
+
+    static_cast<RaptorAPI*>(ptr)->Subscribe();
+
     Handle<Function> func = Handle<Function>::Cast(args[2]);
     Handle<Value> argv[0];
     Handle<Value> js_result = func->Call(self, 0, argv);
@@ -396,20 +417,258 @@ Handle<Value> Raptor_Subscribe(const Arguments& args) {
     return v8::Undefined();
 }
 
+
+#define QJS_VERSION "0.0.4"
+
+// Reads a file into a v8 string.
+v8::Handle<v8::String> ReadFile(const char* name) {
+
+	std::ifstream infile (name, std::ios_base::in);
+
+	if (!infile.good()) return v8::Handle<v8::String>();
+
+	std::stringstream sstream;
+	while (infile.good() && infile.peek() != -1) {
+		sstream.put(infile.get());
+	}
+	infile.close();
+
+	v8::Handle<v8::String> result = v8::String::New(sstream.str().c_str());
+
+	return result;
+}
+
 // Extracts a C string from a V8 Utf8Value.
 const char* ToCString(const v8::String::Utf8Value& value) {
     return *value ? *value : "<string conversion failed>";
 }
 
+void usage() {
+	std::cout << "usage: quantjs [--infiles filename(s)...] [--help]" << std::endl;
+}
+
+void banner() {
+	std::cout << "quantjs v" << QJS_VERSION << std::endl;
+	std::cout << "Copyright 2013-2014 Johan Astborg" << std::endl;
+}
+
+class ARCore {
+public:
+	ARCore(Options options) : options(options) {}
+	void run();
+private:
+	const Options& options;
+};
+
+v8::Handle<v8::Value> Print2(const v8::Arguments& args) {
+	v8::HandleScope scope;
+
+	for (int i = 0; i < args.Length(); i++) {
+		v8::Handle<v8::String> str = args[i]->ToString();
+		v8::String::AsciiValue ascii(str);
+
+		std::cout << *ascii;
+
+	}
+
+	return v8::Undefined();
+}
+
+void ARCore::run() {
+	std::cout << std::endl << "-- ready" << std::endl << std::endl;
+
+	// Check options
+	if (!options.validate()) return;
+		std::cout << options << std::endl;
+
+	// JS part
+	HandleScope handle_scope;
+
+	v8::Handle<v8::ObjectTemplate> global = ObjectTemplate::New();
+    Persistent<Context> context = Context::New(NULL, global);
+    Context::Scope context_scope(context);
+
+	/////////////////7
+
+	Handle<FunctionTemplate> console_templ = FunctionTemplate::New();
+    console_templ->SetClassName(String::New("Console"));
+    Handle<ObjectTemplate> console_proto = console_templ->PrototypeTemplate();
+    console_proto->Set("log", FunctionTemplate::New(ConsoleMethod_Log));
+    Handle<ObjectTemplate> console_inst = console_templ->InstanceTemplate();
+    console_inst->SetInternalFieldCount(1);
+
+    Console* console = new Console();
+    Handle<Function> console_ctor = console_templ->GetFunction();
+    Local<Object> console_obj = console_ctor->NewInstance();
+    console_obj->SetInternalField(0, External::New(console));
+    context->Global()->Set(String::New("console"), console_obj);
+
+   	Handle<FunctionTemplate> raptor_templ = FunctionTemplate::New();
+    raptor_templ->SetClassName(String::New("QuantJS API"));
+
+    Handle<ObjectTemplate> raptor_proto = raptor_templ->PrototypeTemplate();
+
+    raptor_proto->Set("version", FunctionTemplate::New(Raptor_Version));
+    raptor_proto->Set("subscribe", FunctionTemplate::New(Raptor_Subscribe));
+
+    raptor_proto->Set("Print", FunctionTemplate::New(Print));
+    raptor_proto->Set("eqtest", FunctionTemplate::New(Equity_Option_01));
+
+    //// Math functions
+    raptor_proto->Set("log", FunctionTemplate::New(log));
+    raptor_proto->Set("log10", FunctionTemplate::New(log10));
+    raptor_proto->Set("sin", FunctionTemplate::New(log10));
+    raptor_proto->Set("cos", FunctionTemplate::New(log10));
+    raptor_proto->Set("tan", FunctionTemplate::New(log10));
+
+	raptor_proto->Set("load", FunctionTemplate::New(load));
+
+    raptor_proto->Set("sleep", FunctionTemplate::New(sleep));
+    raptor_proto->Set("timems", FunctionTemplate::New(timems));
+
+    // TODO: Ask before exit
+    raptor_proto->Set("exit", FunctionTemplate::New(exit));
+
+
+    Handle<ObjectTemplate> raptor_inst = raptor_templ->InstanceTemplate();
+    raptor_inst->SetInternalFieldCount(1);
+
+    RaptorAPI* raptor = new RaptorAPI();
+    Handle<Function> raptor_ctor = raptor_templ->GetFunction();
+    Local<Object> raptor_obj = raptor_ctor->NewInstance();
+    raptor_obj->SetInternalField(0, External::New(raptor));
+
+	//v8::Handle<v8::ObjectTemplate> global = v8::ObjectTemplate::New(isolate);
+	// Bind the global 'print' function to the C++ Print callback.
+	//global->Set(v8::String::NewFromUtf8(isolate, "print"),
+    //          v8::FunctionTemplate::New(isolate, Print));    
+
+	context->Global()->Set(String::New("quantjs"), raptor_obj);
+
+	///////////
+
+
+	v8::Handle<v8::String> source = ReadFile("quantjs.js");
+	v8::Handle<v8::String> source2 = ReadFile("underscore-min.js");
+
+
+	//// Compile the source code.
+	Handle<Script> script = Script::Compile(source);
+	Handle<Script> script2 = Script::Compile(source2);
+
+	//// Run the script to get the result.
+	Handle<Value> result = script->Run();
+	Handle<Value> result2 = script2->Run();
+
+    Handle<Value> befunc = context->Global()->Get(String::New("init"));
+    Handle<Function> func = Handle<Function>::Cast(befunc);
+    Handle<Value> args[0];
+
+    Handle<Value> js_result = func->Call(context->Global(), 0, args);	
+
+	raptor_proto->Set("print", FunctionTemplate::New(Print));
+//	context->Global()->Set(String::New("print"), FunctionTemplate::New(Print2));
+
+	bool print_result = true;
+
+	while (true) {
+        char buffer[256];
+        printf("> ");
+        char* str = fgets(buffer, 256, stdin);
+        if (str == NULL) break;
+        v8::HandleScope handle_scope;
+
+        Handle<Script> script = Script::Compile(String::New(str), String::New("quantjs"));
+
+		if (!script.IsEmpty()) {
+	        v8::Handle<v8::Value> result = script->Run();
+
+	        //String::Utf8Value str2(result);
+	        //const char* cstr = ToCString(str2);
+        	//printf("%s\n", cstr);
+
+			if (print_result && !result->IsUndefined()) {
+				
+				if (result->IsArray()) {
+
+					//std::cout << " =" << std::endl;
+
+			    	//std::cout << result->ToDetailString() << std::endl;
+					//v8::String::Utf8Value param1(result->ToDetailString());
+					//std::string from = std::string(*param1);
+					//std::cout << from << std::endl;
+					v8::Local<v8::Array> array = v8::Local<v8::Array>::Cast(result->ToObject());
+					for (unsigned int i = 0; i < array->Length(); ++i) {
+						v8::Local<v8::Value> v8_value = array->Get(i);
+						
+						if (v8_value->IsArray()) {
+							v8::Local<v8::Array> arrayInside = v8::Local<v8::Array>::Cast(v8_value->ToObject());
+							printf("\t[%u]\t", i);
+							for (unsigned int i = 0; i < arrayInside->Length(); ++i) {
+								v8::Local<v8::Value> v8_valueInside = arrayInside->Get(i);
+								v8::String::Utf8Value valueInside(v8_valueInside->ToDetailString());
+								printf("%s ", *valueInside);
+							}
+							printf("\n");
+						}
+						else {
+							v8::String::Utf8Value value(v8_value->ToDetailString());
+							printf("\t[%u]\t%s\n", i, *value);
+						}
+					}
+
+				} else if (result->IsObject()) {
+					v8::Local<v8::Object> object = result->ToObject();
+					v8::Local<v8::Array> properties = object->GetOwnPropertyNames();
+					for (unsigned int i = 0; i < properties->Length(); ++i) {
+						v8::Local<v8::Value> v8_value = object->Get(properties->Get(i));
+						v8::String::Utf8Value value(v8_value->ToString());
+						v8::String::Utf8Value key(properties->Get(i)->ToString());
+						printf("\t[%s]\t%s\n", *key, *value);
+					}
+				} else {
+					v8::String::Utf8Value value(result->ToDetailString());
+					printf("\t%s\n", *value);
+				}
+			} 
+		}
+    }
+}
+
+
 int main(int argc, char* argv[]) {
-    
-    //// Create a stack-allocated handle scope. 
+
+	Options options;
+	if (argc == 1) usage();	
+	for (int i = 1; i < argc; ++i) {
+//		if (!strncmp(argv[i], "--threads", 8)) options.threads = atoi(argv[++i]);
+//		if (!strncmp(argv[i], "--width", 8)) options.width = atoi(argv[++i]);
+//		if (!strncmp(argv[i], "--height", 8)) options.height = atoi(argv[++i]);
+//		if (!strncmp(argv[i], "--outfile", 9)) options.outfile = argv[++i];
+		if (!strncmp(argv[i], "--infiles", 8)) options.infile = argv[++i];
+//		if (!strncmp(argv[i], "--scene", 7)) options.scene = atoi(argv[++i]);
+		if (!strncmp(argv[i], "--help", 6) || !strncmp(argv[i], "-h", 2)) usage();
+	}
+
+	banner();
+
+	// Init avantime raytracer
+	ARCore arcore(options);
+	arcore.run();
+	
+
+	if (1==0) {
+	// Check options
+	if (!options.validate()) return 0;
+		std::cout << options << std::endl;
+
+    //// Create a stack-allocated handle scope.
     HandleScope handle_scope;
- 
+
     //// Loading file to context
 
     std::cout << "Loading file: " << argv[1] << std::endl;
-  
+
     std::ifstream infile (argv[1], std::ios_base::in);
     std::stringstream sstream;
     while (infile.good() && infile.peek() != -1) {
@@ -429,7 +688,7 @@ int main(int argc, char* argv[]) {
     console_proto->Set("log", FunctionTemplate::New(ConsoleMethod_Log));
     Handle<ObjectTemplate> console_inst = console_templ->InstanceTemplate();
     console_inst->SetInternalFieldCount(1);
-    
+
     Console* console = new Console();
     Handle<Function> console_ctor = console_templ->GetFunction();
     Local<Object> console_obj = console_ctor->NewInstance();
@@ -438,12 +697,12 @@ int main(int argc, char* argv[]) {
 
 
     //// Raptor
-    
+
     Handle<FunctionTemplate> raptor_templ = FunctionTemplate::New();
     raptor_templ->SetClassName(String::New("QuantJS API"));
-    
+
     Handle<ObjectTemplate> raptor_proto = raptor_templ->PrototypeTemplate();
-    
+
     raptor_proto->Set("version", FunctionTemplate::New(Raptor_Version));
     raptor_proto->Set("subscribe", FunctionTemplate::New(Raptor_Subscribe));
 
@@ -475,17 +734,17 @@ int main(int argc, char* argv[]) {
 
     //// Read source from file
     Handle<String> source = String::New(sstream.str().c_str());
-    
-    //// Compile the source code. 
+
+    //// Compile the source code.
     Handle<Script> script = Script::Compile(source);
 
-    //// Run the script to get the result. 
+    //// Run the script to get the result.
     Handle<Value> result = script->Run();
 
     Handle<Value> befunc = context->Global()->Get(String::New("init"));
     Handle<Function> func = Handle<Function>::Cast(befunc);
     Handle<Value> args[0];
-  
+
     Handle<Value> js_result = func->Call(context->Global(), 0, args);
 
     v8::Local<v8::String> name(v8::String::New("quantjs"));
@@ -498,12 +757,15 @@ int main(int argc, char* argv[]) {
         v8::HandleScope handle_scope;
 
         Handle<Script> script = Script::Compile(String::New(str), name);
-        v8::Handle<v8::Value> result = script->Run();
-        
-        String::Utf8Value str2(result);
-        const char* cstr = ToCString(str2);
-        printf("%s\n", cstr);
-    }
 
+		if (script.IsEmpty()) {
+	        v8::Handle<v8::Value> result = script->Run();
+
+	        String::Utf8Value str2(result);
+	        const char* cstr = ToCString(str2);
+        	printf("%s\n", cstr);
+		}
+    }
+	}
     return 0;
 }
