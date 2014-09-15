@@ -7,8 +7,11 @@
 #include <string>
 #include <vector>
 #include <stdio.h>
+#include <functional>
 #include <stdlib.h>
 #include <pthread.h>
+#include <dlfcn.h>
+
 
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -405,6 +408,53 @@ v8::Handle<v8::Value> glambda_proxy(const v8::Arguments& args) {
 	return v8::Undefined();
 }
 
+void fjohan() {
+	std::cout << "From function fjohan\n";
+}
+
+void fnisse() {
+	std::cout << "From function fnisse\n";
+}
+
+struct v8_proxy {
+
+	void add(v8::Handle<v8::ObjectTemplate>& ot, const std::string& name, 
+		std::function<void()> fun) {
+
+		fps.push_back(name);
+
+		// Not the most beautiful pattern (redesign)
+
+		ot->Set(v8::String::New(name.c_str()), v8::FunctionTemplate::New(
+			[](const v8::Arguments& args)->v8::Handle<v8::Value>
+			{
+				v8::Handle<v8::External> data = v8::Handle<v8::External>::Cast(args.Data());
+				std::function<void()>* out = static_cast<std::function<void()>*>(data->Value());
+
+				if ( args.Length() != 1 ) {
+					return v8::ThrowException(v8::String::New("Wrong nr of args."));
+				}
+			
+				v8::String::AsciiValue ascii(args[0]);
+				(*out)();
+				std::cout << *ascii << "\n";
+			
+				return v8::Undefined();
+			}, v8::External::New(&fun)
+		));
+
+	}
+
+	void list_all() {
+
+		for (auto s : fps) {
+			std::cout << s << std::endl;
+		}
+	}
+
+	std::vector<std::string> fps;
+};
+
 void ARCore::run() {
 	std::cout << std::endl << "-- ready" << std::endl << std::endl;
 
@@ -465,10 +515,13 @@ void ARCore::run() {
 
 	raptor_proto->Set("require", FunctionTemplate::New(require));
 
-
-	//auto glambda = [](const Arguments& arg) { std::cout << "Apan rockar!!\n"; return v8::Undefined(); };
-
-
+	// New design...
+	
+	v8_proxy proxy;
+	
+	proxy.add(raptor_proto, "johan", fjohan);
+	proxy.add(raptor_proto, "nisse",  fnisse);
+	proxy.list_all();
 
 
 	//raptor_proto->Set("apan", FunctionTemplate::New(glambda));
@@ -575,7 +628,6 @@ void ARCore::run() {
 		}
     }
 }
-
 
 int main(int argc, char* argv[]) {
 
