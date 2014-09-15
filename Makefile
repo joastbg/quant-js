@@ -1,6 +1,6 @@
 # Define the compiler options
 CXXFLAGS  = -pipe -O2
-CXXFLAGS += -pthread -Iinclude -I/opt/local/include/ -L/opt/local/lib/ -lQuantLib
+CXXFLAGS += -pthread -Iinclude -I/opt/local/include/ -L/opt/local/lib/
 
 # Define what to do when make is executed without arguments.
 all: quantjs

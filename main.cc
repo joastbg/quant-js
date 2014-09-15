@@ -34,6 +34,8 @@ using namespace v8;
 using namespace boost::gregorian;
 using namespace boost::posix_time;
 
+Persistent<Context> context;
+
 v8::Handle<v8::Value> Print(const v8::Arguments& args) {
 
     if (args[0]->IsObject()) {
@@ -90,9 +92,52 @@ class Console {
 };
 
 v8::Handle<v8::Value> exit(const v8::Arguments& args)
-{
+{	
     // Hack to exit app
     exit(0);
+}
+
+boost::random::mt19937 gen;
+boost::random::uniform_real_distribution<> dist(1, 3.14159);
+
+v8::Handle<v8::Value> callme(const v8::Arguments& args)
+{
+	Handle<v8::Object> global = context->Global();
+
+	if (args[2]->IsFunction()) {
+		Handle<v8::Function> func = v8::Handle<v8::Function>::Cast(args[2]->ToObject());
+		Handle<Value> argsf[2];
+	    
+	    //argsf[1] = v8::Number::New(0.02);
+
+		double acc=0;	
+
+		Handle<Number> aNum = Handle<Number>::Cast(args[0]);
+		Handle<Number> bNum = Handle<Number>::Cast(args[1]);
+
+		double a = aNum->NumberValue();
+		double b = bNum->NumberValue();
+
+		boost::random::uniform_real_distribution<> dist2(a, b);
+
+		for (int i=0;i<50000;i++) {
+		
+			argsf[0] = v8::Number::New(dist2(gen));
+			Handle<Value> js_result = func->Call(global, 1, argsf);
+
+			//Handle<Number> strikePriceNum = Handle<Number>::Cast(strikePrice);
+            //v8::String::AsciiValue testValue(strikePriceNum->ToString());
+            //strikeDouble = atof(*testValue);
+
+			acc += js_result->NumberValue();
+
+			v8::String::Utf8Value value(js_result->ToDetailString());
+			//printf("\t%s\n", *value);
+		}
+		std::cout << "I: " << (b-a)*acc/50000.0 << std::endl;
+	}
+
+	return v8::Undefined();
 }
 
 v8::Handle<v8::Value> log10(const v8::Arguments& args)
@@ -164,9 +209,6 @@ v8::Handle<v8::Value> tan(const v8::Arguments& args)
 
     return Number::New(tan(arg));
 }
-
-boost::random::mt19937 gen;
-boost::random::uniform_real_distribution<> dist(0, 1);
 
 v8::Handle<v8::Value> randfloat(const v8::Arguments& args)
 {
@@ -506,7 +548,7 @@ void ARCore::run() {
 	HandleScope handle_scope;
 
 	v8::Handle<v8::ObjectTemplate> global = ObjectTemplate::New();
-    Persistent<Context> context = Context::New(NULL, global);
+    context = Context::New(NULL, global);
     Context::Scope context_scope(context);
 
 	/////////////////7
@@ -541,7 +583,7 @@ void ARCore::run() {
     raptor_proto->Set("sin", FunctionTemplate::New(log10));
     raptor_proto->Set("cos", FunctionTemplate::New(log10));
     raptor_proto->Set("tan", FunctionTemplate::New(log10));
-
+	raptor_proto->Set("callme", FunctionTemplate::New(callme));
 	raptor_proto->Set("load", FunctionTemplate::New(load));
 
     raptor_proto->Set("sleep", FunctionTemplate::New(sleep));
@@ -560,11 +602,6 @@ void ARCore::run() {
     Handle<Function> raptor_ctor = raptor_templ->GetFunction();
     Local<Object> raptor_obj = raptor_ctor->NewInstance();
     raptor_obj->SetInternalField(0, External::New(raptor));
-
-	//v8::Handle<v8::ObjectTemplate> global = v8::ObjectTemplate::New(isolate);
-	// Bind the global 'print' function to the C++ Print callback.
-	//global->Set(v8::String::NewFromUtf8(isolate, "print"),
-    //          v8::FunctionTemplate::New(isolate, Print));    
 
 	context->Global()->Set(String::New("quantjs"), raptor_obj);
 
@@ -614,20 +651,10 @@ void ARCore::run() {
 				fprintf(stderr, "%s\n", exception_string);
 			}
 
-	        //String::Utf8Value str2(result);
-	        //const char* cstr = ToCString(str2);
-        	//printf("%s\n", cstr);
-
 			if (!result.IsEmpty() && print_result && !result->IsUndefined()) {
 				
 				if (result->IsArray()) {
 
-					//std::cout << " =" << std::endl;
-
-			    	//std::cout << result->ToDetailString() << std::endl;
-					//v8::String::Utf8Value param1(result->ToDetailString());
-					//std::string from = std::string(*param1);
-					//std::cout << from << std::endl;
 					v8::Local<v8::Array> array = v8::Local<v8::Array>::Cast(result->ToObject());
 					for (unsigned int i = 0; i < array->Length(); ++i) {
 						v8::Local<v8::Value> v8_value = array->Get(i);
@@ -677,131 +704,15 @@ int main(int argc, char* argv[]) {
 	Options options;
 	if (argc == 1) usage();	
 	for (int i = 1; i < argc; ++i) {
-//		if (!strncmp(argv[i], "--threads", 8)) options.threads = atoi(argv[++i]);
-//		if (!strncmp(argv[i], "--width", 8)) options.width = atoi(argv[++i]);
-//		if (!strncmp(argv[i], "--height", 8)) options.height = atoi(argv[++i]);
-//		if (!strncmp(argv[i], "--outfile", 9)) options.outfile = argv[++i];
 		if (!strncmp(argv[i], "--infiles", 8)) options.infile = argv[++i];
-//		if (!strncmp(argv[i], "--scene", 7)) options.scene = atoi(argv[++i]);
 		if (!strncmp(argv[i], "--help", 6) || !strncmp(argv[i], "-h", 2)) usage();
 	}
 
 	banner();
 
-	// Init avantime raytracer
+	// Init quantjs
 	ARCore arcore(options);
 	arcore.run();
 	
-
-	if (1==0) {
-	// Check options
-	if (!options.validate()) return 0;
-		std::cout << options << std::endl;
-
-    //// Create a stack-allocated handle scope.
-    HandleScope handle_scope;
-
-    //// Loading file to context
-
-    std::cout << "Loading file: " << argv[1] << std::endl;
-
-    std::ifstream infile (argv[1], std::ios_base::in);
-    std::stringstream sstream;
-    while (infile.good() && infile.peek() != -1) {
-        sstream.put(infile.get());
-    }
-    infile.close();
-
-    v8::Handle<v8::ObjectTemplate> global = ObjectTemplate::New();
-    Persistent<Context> context = Context::New(NULL, global);
-    Context::Scope context_scope(context);
-
-    //// Map Console class
-
-    Handle<FunctionTemplate> console_templ = FunctionTemplate::New();
-    console_templ->SetClassName(String::New("Console"));
-    Handle<ObjectTemplate> console_proto = console_templ->PrototypeTemplate();
-    console_proto->Set("log", FunctionTemplate::New(ConsoleMethod_Log));
-    Handle<ObjectTemplate> console_inst = console_templ->InstanceTemplate();
-    console_inst->SetInternalFieldCount(1);
-
-    Console* console = new Console();
-    Handle<Function> console_ctor = console_templ->GetFunction();
-    Local<Object> console_obj = console_ctor->NewInstance();
-    console_obj->SetInternalField(0, External::New(console));
-    context->Global()->Set(String::New("console"), console_obj);
-
-
-    //// Raptor
-
-    Handle<FunctionTemplate> raptor_templ = FunctionTemplate::New();
-    raptor_templ->SetClassName(String::New("QuantJS API"));
-
-    Handle<ObjectTemplate> raptor_proto = raptor_templ->PrototypeTemplate();
-
-    raptor_proto->Set("version", FunctionTemplate::New(Raptor_Version));
-    raptor_proto->Set("subscribe", FunctionTemplate::New(Raptor_Subscribe));
-
-    raptor_proto->Set("Print", FunctionTemplate::New(Print));
-    raptor_proto->Set("eqtest", FunctionTemplate::New(Equity_Option_01));
-
-    //// Math functions
-    raptor_proto->Set("log", FunctionTemplate::New(log));
-    raptor_proto->Set("log10", FunctionTemplate::New(log10));
-    raptor_proto->Set("sin", FunctionTemplate::New(log10));
-    raptor_proto->Set("cos", FunctionTemplate::New(log10));
-    raptor_proto->Set("tan", FunctionTemplate::New(log10));
-
-    raptor_proto->Set("sleep", FunctionTemplate::New(sleep));
-    raptor_proto->Set("timems", FunctionTemplate::New(timems));
-
-    // TODO: Ask before exit
-    raptor_proto->Set("exit", FunctionTemplate::New(exit));
-
-
-    Handle<ObjectTemplate> raptor_inst = raptor_templ->InstanceTemplate();
-    raptor_inst->SetInternalFieldCount(1);
-
-    RaptorAPI* raptor = new RaptorAPI();
-    Handle<Function> raptor_ctor = raptor_templ->GetFunction();
-    Local<Object> raptor_obj = raptor_ctor->NewInstance();
-    raptor_obj->SetInternalField(0, External::New(raptor));
-    context->Global()->Set(String::New("quantjs"), raptor_obj);
-
-    //// Read source from file
-    Handle<String> source = String::New(sstream.str().c_str());
-
-    //// Compile the source code.
-    Handle<Script> script = Script::Compile(source);
-
-    //// Run the script to get the result.
-    Handle<Value> result = script->Run();
-
-    Handle<Value> befunc = context->Global()->Get(String::New("init"));
-    Handle<Function> func = Handle<Function>::Cast(befunc);
-    Handle<Value> args[0];
-
-    Handle<Value> js_result = func->Call(context->Global(), 0, args);
-
-    v8::Local<v8::String> name(v8::String::New("quantjs"));
-
-    while (true) {
-        char buffer[256];
-        printf("> ");
-        char* str = fgets(buffer, 256, stdin);
-        if (str == NULL) break;
-        v8::HandleScope handle_scope;
-
-        Handle<Script> script = Script::Compile(String::New(str), name);
-
-		if (script.IsEmpty()) {
-	        v8::Handle<v8::Value> result = script->Run();
-
-	        String::Utf8Value str2(result);
-	        const char* cstr = ToCString(str2);
-        	printf("%s\n", cstr);
-		}
-    }
-	}
     return 0;
 }
