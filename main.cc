@@ -380,6 +380,31 @@ v8::Handle<v8::Value> Print2(const v8::Arguments& args) {
 	return v8::Undefined();
 }
 
+v8::Handle<v8::Value> require(const v8::Arguments& args) {
+
+
+	v8::String::AsciiValue argStr(args[0]->ToString());
+
+	Handle<v8::Object> global = context->Global();
+
+	v8::Handle<v8::String> source = ReadFile(*argStr);
+	Handle<Script> script = Script::Compile(source);
+	Handle<Value> result = script->Run();
+
+	std::cout << "Apan rockar!\n";
+
+	return v8::Undefined();
+}
+
+
+v8::Handle<v8::Value> glambda_proxy(const v8::Arguments& args) {
+	v8::HandleScope scope;
+
+	std::cout << "Apan rockar!\n";
+
+	return v8::Undefined();
+}
+
 void ARCore::run() {
 	std::cout << std::endl << "-- ready" << std::endl << std::endl;
 
@@ -436,6 +461,17 @@ void ARCore::run() {
 
     // TODO: Ask before exit
     raptor_proto->Set("exit", FunctionTemplate::New(exit));
+
+
+	raptor_proto->Set("require", FunctionTemplate::New(require));
+
+
+	//auto glambda = [](const Arguments& arg) { std::cout << "Apan rockar!!\n"; return v8::Undefined(); };
+
+
+
+
+	//raptor_proto->Set("apan", FunctionTemplate::New(glambda));
 
     Handle<ObjectTemplate> raptor_inst = raptor_templ->InstanceTemplate();
     raptor_inst->SetInternalFieldCount(1);

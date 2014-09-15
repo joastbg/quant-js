@@ -6,7 +6,7 @@ var a=1;
 // European, Bermudan and American
 
 function fromjs() {
-	return "quantjs";
+	return "quantjs!!!!";
 }
 
 /// Wrapper to make functions global, ie motivated by log, mixup with console.log otherwise
