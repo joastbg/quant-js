@@ -10,7 +10,7 @@
 
 class Options {
 public:
-	Options() : threads(DEFAULT_THREADS), width(DEFAULT_WIDTH), height(DEFAULT_HEIGHT), tilesize(32), outfile("out.tga"), infile("-"), scene(0), statistics(true) { }
+	Options() : threads(DEFAULT_THREADS), width(DEFAULT_WIDTH), height(DEFAULT_HEIGHT), tilesize(32), outfile("out.tga"), infile("-"), scene(0), statistics(true), debug(false) { }
 	int threads;
 	int width;
 	int height;
@@ -18,6 +18,7 @@ public:
 	std::string outfile;
 	std::string infile;
 	int scene;
+	bool debug;
 	bool statistics;
 
 	bool validate() const;

@@ -1,16 +1,22 @@
 #include "options.h"
 
-bool Options::validate() const {
-	// Check input file and Scene nr is valid
-	if (infile == "-" && scene == 0) {
+bool Options::validate() const 
+{
+	// Check input file is valid
+	if (infile == "-") {
 		std::cerr << "ERROR: No input file or scene given" << std::endl;
 		return false;
 	}
 	return true;
 }
 
-std::ostream& operator<<(std::ostream& out, const Options& o) {
+std::ostream& operator<<(std::ostream& out, const Options& o) 
+{
+	if (!o.debug)	
+		return out;
+
 	out << std::boolalpha;
+	out << std::endl;
 	out << "-- Options" << std::endl;
 	//out << "options.threads:\t" << o.threads << std::endl;
 	//out << "options.width:\t\t" << o.width << std::endl;

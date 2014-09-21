@@ -585,3 +585,545 @@ struct v8_proxy {
 
 	std::vector<std::string> fps;
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#include <v8.h>
+#include <iostream>
+#include <fstream>
+#include <assert.h>
+#include <fcntl.h>
+#include <string.h>
+#include <string>
+#include <vector>
+#include <stdio.h>
+#include <functional>
+#include <stdlib.h>
+#include <thread>
+#include <chrono>
+#include <pthread.h>
+
+#include <boost/date_time/gregorian/gregorian.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+
+#include <boost/thread/thread.hpp>
+
+#include <boost/random.hpp>      
+#include <boost/limits.hpp>
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/normal_distribution.hpp>
+#include <boost/random/variate_generator.hpp>
+#include <boost/generator_iterator.hpp>
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/uniform_real_distribution.hpp>
+
+#include <Eigen/Eigenvalues>
+
+#include "options.h"
+
+#define QJS_VERSION "0.0.4"
+
+using namespace v8;
+using namespace boost::gregorian;
+using namespace boost::posix_time;
+
+Persistent<Context> context;
+
+const char* ToCString(const v8::String::Utf8Value& value) {
+    return *value ? *value : "<string conversion failed>";
+}
+
+void usage() {
+    std::cout << "usage: quantjs [--infiles filename(s)...] [--help]" << std::endl;
+}
+
+void banner() {
+    std::cout << "quantjs v" << QJS_VERSION << std::endl;
+    std::cout << "Copyright 2013-2014 Johan Astborg" << std::endl;
+}
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <memory.h>
+ 
+#include <GL/glew.h>
+#include <GL/glxew.h>
+#include <GL/freeglut.h>
+
+
+// Colors
+GLfloat WHITE[] = {1, 1, 1};
+GLfloat RED[] = {1, 0, 0};
+GLfloat GREEN[] = {0, 1, 0};
+GLfloat MAGENTA[] = {1, 0, 1};
+
+// A camera.  It moves horizontally in a circle centered at the origin of
+// radius 10.  It moves vertically straight up and down.
+class Camera {
+  double theta;      // determines the x and z positions
+  double y;          // the current y position
+  double dTheta;     // increment in theta for swinging the camera around
+  double dy;         // increment in y for moving the camera up/down
+public:
+  Camera(): theta(0), y(3), dTheta(0.04), dy(0.2) {}
+  double getX() {return 10 * cos(theta);}
+  double getY() {return y;}
+  double getZ() {return 10 * sin(theta);}
+  void moveRight() {theta += dTheta;}
+  void moveLeft() {theta -= dTheta;}
+  void moveUp() {y += dy;}
+  void moveDown() {if (y > dy) y -= dy;}
+};
+
+class Checkerboard {
+  int displayListId;
+  int width;
+  int depth;
+public:
+  Checkerboard(int width, int depth): width(width), depth(depth) {}
+  double centerx() {return width*0.25 / 2;}
+  double centerz() {return depth*0.25 / 2;}
+  void create() {
+    displayListId = glGenLists(1);
+    glNewList(displayListId, GL_COMPILE);
+    GLfloat lightPosition[] = {4, 3, 7, 1};
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
+    glBegin(GL_QUADS);
+    glNormal3d(0, 1, 0);
+    for (int x = 0; x < width - 1; x++) {
+      for (int z = 0; z < depth - 1; z++) {
+        glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE,
+                     (x + z) % 2 == 0 ? RED : WHITE);
+        glVertex3d((x)*0.25, 0, (z)*0.25);
+        glVertex3d((x+1)*0.25, 0, (z)*0.25);
+        glVertex3d((x+1)*0.25, 0, (z+1)*0.25);
+        glVertex3d((x)*0.25, 0, (z+1)*0.25);
+      }
+    }
+    glEnd();
+    glEndList();
+  }
+  void draw() {
+    glCallList(displayListId);
+  }
+};
+
+Checkerboard checkerboard(256, 256);
+Camera camera;
+
+void init() {
+  glEnable(GL_DEPTH_TEST);
+  glLightfv(GL_LIGHT0, GL_DIFFUSE, WHITE);
+  glLightfv(GL_LIGHT0, GL_SPECULAR, WHITE);
+  glMaterialfv(GL_FRONT, GL_SPECULAR, WHITE);
+  glMaterialf(GL_FRONT, GL_SHININESS, 30);
+  glEnable(GL_LIGHTING);
+  glEnable(GL_LIGHT0);
+  checkerboard.create();
+}
+
+// Draws one frame, the checkerboard then the balls, from the current camera
+// position.
+void display() {
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glLoadIdentity();
+  gluLookAt(camera.getX(), camera.getY(), camera.getZ(),
+            checkerboard.centerx(), 0.0, checkerboard.centerz(),
+            0.0, 1.0, 0.0);
+  checkerboard.draw();
+  //for (int i = 0; i < sizeof balls / sizeof(Ball); i++) {
+  //  balls[i].update();
+  //}
+  glFlush();
+  glutSwapBuffers();
+}
+
+// On reshape, constructs a camera that perfectly fits the window.
+void reshape(GLint w, GLint h) {
+  glViewport(0, 0, w, h);
+  glMatrixMode(GL_PROJECTION);
+  glLoadIdentity();
+  gluPerspective(40.0, GLfloat(w) / GLfloat(h), 1.0, 150.0);
+  glMatrixMode(GL_MODELVIEW);
+}
+
+// Requests to draw the next frame.
+void timer(int v) {
+  glutPostRedisplay();
+  glutTimerFunc(1000/60, timer, v);
+}
+
+// Moves the camera according to the key pressed, then ask to refresh the
+// display.
+void special(int key, int, int) {
+  switch (key) {
+    case GLUT_KEY_LEFT: camera.moveLeft(); break;
+    case GLUT_KEY_RIGHT: camera.moveRight(); break;
+    case GLUT_KEY_UP: camera.moveUp(); break;
+    case GLUT_KEY_DOWN: camera.moveDown(); break;
+  }
+  glutPostRedisplay();
+}
+
+struct gl_visualization {
+    void run() {
+
+        char* buffer = (char*)"quant-js";
+        int argc=1;
+        char** argv = &buffer;
+
+        glutInit(&argc, argv);
+        glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+        glutInitWindowPosition(80, 80);
+        glutInitWindowSize(800, 600);
+        glutCreateWindow(QJS_VERSION);
+        glutDisplayFunc(display);
+        glutReshapeFunc(reshape);
+        glutSpecialFunc(special);
+        glutTimerFunc(100, timer, 0);
+        init();
+        glutMainLoop();
+
+        /*
+        glutInit(&argc, argv);
+        glutInitDisplayMode(GLUT_DOUBLE|GLUT_RGBA);
+        glutInitWindowSize(640, 480);
+        glutInitWindowPosition(100, 100);
+        glutCreateWindow(QJS_VERSION);
+        glutDisplayFunc(dispfun);
+        glClearColor(0.0f, 1.0f, 0.0f, 0.0f);
+        glutMainLoop();
+        */
+
+        for (;;) {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            std::cout << "gl-viz run...\n";
+        }
+    }
+};
+
+// TODO: move
+struct v8_proxy {
+
+    void add(v8::Handle<v8::ObjectTemplate>& ot, const std::string& name, 
+        std::function<void()> fun) {
+
+        fps.push_back(name);
+
+        // Not the most beautiful pattern (redesign)
+
+        ot->Set(v8::String::New(name.c_str()), v8::FunctionTemplate::New(
+            [](const v8::Arguments& args)->v8::Handle<v8::Value>
+            {
+                v8::Handle<v8::External> data = v8::Handle<v8::External>::Cast(args.Data());
+                std::function<void()>* out = static_cast<std::function<void()>*>(data->Value());
+
+                if ( args.Length() != 1 ) {
+                    return v8::ThrowException(v8::String::New("Wrong nr of args."));
+                }
+            
+                v8::String::AsciiValue ascii(args[0]);
+                (*out)();
+                std::cout << *ascii << "\n";
+            
+                return v8::Undefined();
+            }, v8::External::New(&fun)
+        ));
+
+    }
+
+    void list_all() {
+
+        for (auto s : fps) {
+            std::cout << s << std::endl;
+        }
+    }
+
+    std::vector<std::string> fps;
+};
+
+// TODO: move
+class Core {
+public:
+    Core(Options options) : options(options) {}
+    void run();
+private:
+    const Options& options;
+};
+
+void fjohan() {
+    std::cout << "From function fjohan\n";
+
+    // A. Define the lagged Fibonacci and Uniform objects
+    boost::lagged_fibonacci607 rng;
+    rng.seed(static_cast<int> (std::time(0)));
+    boost::uniform_real<> uni(0.0,1.0);
+     
+    // B. Produce Uniform (0, 1)
+    //boost::variate_generator<boost::lagged_fibonacci607&,boost::uniform_real<>> uniRng(rng, uni);
+     
+    boost::variate_generator<boost::lagged_fibonacci607, 
+                           boost::uniform_real<> > uniRng(rng, uni);
+    // C. Choose the desired accuracy
+    std::cout << "How many darts to throw? "; long N; std::cin >> N;
+     
+    // D. Thow the dart; does it fall in the circle or outside
+    // Start throwing darts and count where they land
+    long hits = 0;
+    double x, y, distance;
+    for (long n = 1; n <= N; ++n) {
+        x = uniRng(); y = uniRng();
+        distance = sqrt(x*x + y*y);
+     
+        if ( distance <=1) {
+            hits++;
+        }
+    }
+     
+    // E.  Produce the answer
+    std::cout << "PI is: " << hits << ", " << 4.0 * double(hits) / double (N) << std::endl;
+}
+
+void fnisse() {
+    std::cout << "From function fnisse\n";
+    //draw();
+    
+    using Eigen::MatrixXcf;
+    using Eigen::VectorXcf;
+    using Eigen::MatrixXf;
+    using Eigen::ComplexEigenSolver;
+    using Eigen::IOFormat;    
+    using Eigen::StreamPrecision;
+    using Eigen::SelfAdjointEigenSolver;
+
+    IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
+    IOFormat OctaveFmt(StreamPrecision, 0, ", ", ";\n", "", "", "[", "]");
+
+    MatrixXcf A = MatrixXcf::Random(4,4);
+    std::cout << "Here is a random 4x4 matrix, A:" << std::endl << A << std::endl << std::endl;
+    ComplexEigenSolver<MatrixXcf> ces;
+    ces.compute(A);
+    std::cout << "The eigenvalues of A are:" << std::endl << ces.eigenvalues().format(OctaveFmt) << std::endl;
+    std::cout << "The matrix of eigenvectors, V, is:" << std::endl << ces.eigenvectors().format(OctaveFmt) << std::endl << std::endl;
+    std::complex<float> lambda = ces.eigenvalues()[0];
+    std::cout << "Consider the first eigenvalue, lambda = " << lambda << std::endl;
+    VectorXcf v = ces.eigenvectors().col(0);
+    std::cout << "If v is the corresponding eigenvector, then lambda * v = " << std::endl << lambda * v << std::endl;
+    std::cout << "... and A * v = " << std::endl << A * v << std::endl << std::endl;
+    std::cout << "Finally, V * D * V^(-1) = " << std::endl
+        << (ces.eigenvectors() * ces.eigenvalues().asDiagonal() * ces.eigenvectors().inverse()).format(OctaveFmt)
+        << std::endl << std::endl;
+
+    MatrixXcf ones = MatrixXcf::Ones(3,3);
+    ComplexEigenSolver<MatrixXcf> ces2(ones);
+    std::cout << "The first eigenvector of the 3x3 matrix of ones is:" 
+         << std::endl << ces2.eigenvectors().col(1).format(CleanFmt) << std::endl;
+
+    SelfAdjointEigenSolver<MatrixXf> es(4);
+    MatrixXf X1 = MatrixXf::Random(4,4);
+    MatrixXf A1 = X1 + X1.transpose();
+    es.compute(A1);
+    std::cout << "The eigenvalues of A are: " << es.eigenvalues().transpose().format(OctaveFmt) << std::endl;
+    es.compute(A1 + MatrixXf::Identity(4,4)); // re-use es to compute eigenvalues of A+I
+    std::cout << "The eigenvalues of A+I are: " << es.eigenvalues().transpose().format(OctaveFmt) << std::endl;
+
+
+    Eigen::Matrix3f A2;
+    Eigen::Vector3f b2;
+    A2 << 1,  3, -2,
+           3,  5,  6,
+           2,  4,  3;
+    b2 << 5, 7, 8;
+    std::cout << "Here is the matrix A:\n" << A2 << std::endl;
+    std::cout << "Here is the vector b:\n" << b2 << std::endl;
+    Eigen::Vector3f x2 = A2.colPivHouseholderQr().solve(b2);
+    std::cout << "The solution is:\n" << x2 << std::endl;
+
+    std::cout << "-------------------------------\n";
+}
+
+void startgl() {
+    gl_visualization foo;
+    auto thread = new std::thread(std::bind(&gl_visualization::run, foo));
+}
+
+// Reads a file into a v8 string.
+v8::Handle<v8::String> ReadFile(const char* name) {
+
+    std::ifstream infile (name, std::ios_base::in);
+
+    if (!infile.good()) return v8::Handle<v8::String>();
+
+    std::stringstream sstream;
+    while (infile.good() && infile.peek() != -1) {
+        sstream.put(infile.get());
+    }
+    infile.close();
+
+    v8::Handle<v8::String> result = v8::String::New(sstream.str().c_str());
+
+    return result;
+}
+
+class QuantEngine {
+    public:
+        QuantEngine() : version(QJS_VERSION) {};
+
+        std::string& Version() {
+            return version;
+        }      
+
+    private:
+        std::string version;
+};
+
+Handle<Value> Version(const Arguments& args)
+{
+    Local<Object> self = args.Holder();
+    Local<External> wrap = Local<External>::Cast(self->GetInternalField(0));
+    void* ptr = wrap->Value();
+
+    return v8::String::New(static_cast<QuantEngine*>(ptr)->Version().c_str());
+}
+
+void Core::run() {
+
+    // Check options
+    if (!options.validate()) return;
+        std::cout << options << std::endl;
+
+    // Init and start V8
+    HandleScope handle_scope;
+
+    v8::Handle<v8::ObjectTemplate> global = ObjectTemplate::New();
+    context = Context::New(NULL, global);
+    Context::Scope context_scope(context);
+
+    Handle<FunctionTemplate> engine_templ = FunctionTemplate::New();
+    engine_templ->SetClassName(String::New("QuantJS API"));
+
+    Handle<ObjectTemplate> engine_proto = engine_templ->PrototypeTemplate();
+
+    // use of proxy
+    v8_proxy proxy;
+
+    proxy.add(engine_proto, "johan", fjohan);
+    proxy.add(engine_proto, "nisse",  fnisse);
+    proxy.add(engine_proto, "startgl", startgl);
+    proxy.list_all();
+
+    ///
+
+    engine_proto->Set("version", FunctionTemplate::New(Version));
+    
+    Handle<ObjectTemplate> engine_inst = engine_templ->InstanceTemplate();
+    engine_inst->SetInternalFieldCount(1);
+
+    QuantEngine* engine = new QuantEngine();
+    Handle<Function> engine_ctor = engine_templ->GetFunction();
+    Local<Object> engine_obj = engine_ctor->NewInstance();
+    engine_obj->SetInternalField(0, External::New(engine));
+
+    context->Global()->Set(String::New("quantjs"), engine_obj);
+
+    // Libraries
+
+    std::vector<std::string> files;
+    files.push_back("quantjs.js");
+    files.push_back("underscore-min.js");
+    files.push_back("numeric-1.2.6.min.js");
+
+    for (int i=0;i<files.size();i++) {
+        v8::Handle<v8::String> source = ReadFile(files[i].c_str());
+        Handle<Script> script = Script::Compile(source);
+        Handle<Value> result = script->Run();
+    }
+
+
+    // REPL
+
+    bool print_result = true;
+
+    while (true) {
+        char buffer[256];
+        printf("qjs> ");
+        char* str = fgets(buffer, 256, stdin);
+        if (str == NULL) break;
+        v8::HandleScope handle_scope;
+        v8::TryCatch try_catch;
+
+        Handle<Script> script = Script::Compile(String::New(str), String::New("quantjs"));
+
+        if (!script.IsEmpty()) {
+
+            v8::Handle<v8::Value> result = script->Run();
+
+            v8::String::Utf8Value exception(try_catch.Exception());
+            const char* exception_string = ToCString(exception);
+            v8::Handle<v8::Message> message = try_catch.Message();        
+            if (!message.IsEmpty()) {
+                fprintf(stderr, "%s\n", exception_string);
+            }
+
+            if (!result.IsEmpty() && print_result && !result->IsUndefined()) {
+                
+                if (result->IsArray()) {
+
+                    v8::Local<v8::Array> array = v8::Local<v8::Array>::Cast(result->ToObject());
+                    for (unsigned int i = 0; i < array->Length(); ++i) {
+                        v8::Local<v8::Value> v8_value = array->Get(i);
+                        
+                        if (v8_value->IsArray()) {
+                            v8::Local<v8::Array> arrayInside = v8::Local<v8::Array>::Cast(v8_value->ToObject());
+                            printf("\t[%u]\t", i);
+                            for (unsigned int j = 0; j < arrayInside->Length(); ++j) {
+                                v8::Local<v8::Value> v8_valueInside = arrayInside->Get(j);
+                                v8::String::Utf8Value valueInside(v8_valueInside->ToDetailString());
+                                printf("%s ", *valueInside);
+                            }
+                            printf("\n");
+                        }
+                        else {
+                            v8::String::Utf8Value value(v8_value->ToDetailString());
+                            printf("\t[%u]\t%s\n", i, *value);
+                        }
+                    }
+
+                } else if (result->IsNumber()) {
+                    v8::Local<v8::Number> number = result->ToNumber();
+
+                    printf("\t%4.4f\n", number->NumberValue());
+
+                } else if (result->IsObject()) {
+                    v8::Local<v8::Object> object = result->ToObject();
+                    v8::Local<v8::Array> properties = object->GetOwnPropertyNames();
+                    for (unsigned int i = 0; i < properties->Length(); ++i) {
+                        v8::Local<v8::Value> v8_value = object->Get(properties->Get(i));
+                        v8::String::Utf8Value value(v8_value->ToString());
+                        v8::String::Utf8Value key(properties->Get(i)->ToString());
+                        printf("\t[%s]\t%s\n", *key, *value);
+                    }
+                } else {
+                    v8::String::Utf8Value value(result->ToDetailString());
+                    printf("\t%s\n", *value);
+                }
+            } 
+        }
+    }
+}
+
+
+
