@@ -4,7 +4,7 @@ CXXFLAGS += -pthread -Iinclude -I/opt/local/include/ -I/usr/include/eigen3/
 
 # Define what to do when make is executed without arguments.
 all: quantjs
-	clang++ -o quantjs -pthread main.o options.o core.o -lv8 -Iinclude -I/usr/include/eigen3/ -I/opt/local/include/ -L/opt/local/lib/ -lQuantLib -lboost_thread -lboost_date_time -lboost_system -lglut -lGL -lGLU -lGLEW -lX11
+	clang++ -o quantjs -pthread main.o options.o core.o -lv8 -Iinclude -I/usr/include/eigen3/ -I/opt/local/include/ -L/opt/local/lib/ -lQuantLib -lboost_thread -lboost_date_time -lboost_system -lglut -lGL -lGLU -lGLEW -lX11 -llapack -lblas
 quantjs: options.o core.o main.o
 
 # Define the rules for the object files.

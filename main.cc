@@ -26,7 +26,40 @@ void usage() {
     std::cout << "usage: quantjs [--infiles filename(s)...] [--help]" << std::endl;
 }
 
+#include <boost/numeric/ublas/hermitian.hpp>
+#include <boost/numeric/ublas/io.hpp>
+
 int main(int argc, char* argv[]) {
+
+    /*
+    using namespace boost::numeric::ublas;
+    hermitian_matrix<std::complex<double>, lower> ml (3, 3);
+    for (unsigned i = 0; i < ml.size1 (); ++ i) {
+        for (unsigned j = 0; j < i; ++ j)
+            ml (i, j) = std::complex<double> (3 * i + j, 3 * i + j);
+        ml (i, i) = std::complex<double> (4 * i, 0);
+    }
+    std::cout << ml << std::endl;
+    hermitian_matrix<std::complex<double>, upper> mu (3, 3);
+    for (unsigned i = 0; i < mu.size1 (); ++ i) {
+        mu (i, i) = std::complex<double> (4 * i, 0);
+        for (unsigned j = i + 1; j < mu.size2 (); ++ j)
+            mu (i, j) = std::complex<double> (3 * i + j, 3 * i + j);
+    }
+    std::cout << mu << std::endl;
+    
+    vector<double> v (3);
+    for (unsigned i = 0; i < v.size (); ++ i)
+        v (i) = i;
+    std::cout << v << std::endl;
+    std::cout << v*10.0 << std::endl;
+
+    matrix<double> m (3, 3);
+    for (unsigned i = 0; i < m.size1 (); ++ i)
+        for (unsigned j = 0; j < m.size2 (); ++ j)
+            m (i, j) = 3 * i + j;
+    std::cout << m << std::endl;
+    */
 
     Options options;
     if (argc == 1) usage();    
