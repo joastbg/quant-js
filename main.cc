@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
             mu (i, j) = std::complex<double> (3 * i + j, 3 * i + j);
     }
     std::cout << mu << std::endl;
-    
+
     vector<double> v (3);
     for (unsigned i = 0; i < v.size (); ++ i)
         v (i) = i;
@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
     */
 
     Options options;
-    if (argc == 1) usage();    
+    if (argc == 1) usage();
     for (int i = 1; i < argc; ++i) {
         if (!strncmp(argv[i], "--infiles", 8)) options.infile = argv[++i];
         if (!strncmp(argv[i], "--help", 6) || !strncmp(argv[i], "-h", 2)) usage();
@@ -71,8 +71,13 @@ int main(int argc, char* argv[]) {
 
     banner();
 
+    if(!options.validate()) {
+      usage();
+      return 0;
+    }
+
     Core Core(options);
     Core.run();
-    
+
     return 0;
 }
