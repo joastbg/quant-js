@@ -11,6 +11,11 @@
 #include <numeric>
 #include <sstream>
 
+#include <boost/numeric/ublas/vector.hpp>
+#include <boost/numeric/ublas/matrix.hpp>
+#include <boost/numeric/ublas/hermitian.hpp>
+#include <boost/numeric/ublas/io.hpp>
+
 // -----------------------------------------------------------------------------------------
 // --- POINT --------------------------------------------------------------------------------------
 
@@ -119,20 +124,20 @@ public:
 		//replaceAll(l.data, ";;", ";");
         return is;
     }
-    operator std::string() const { return data; }    
+    operator std::string() const { return data; }
 };
 
 struct LineReader: std::ctype<char> {
     LineReader(): std::ctype<char>(get_table()) {}
     static std::ctype_base::mask const* get_table() {
-        static std::vector<std::ctype_base::mask> 
+        static std::vector<std::ctype_base::mask>
             rc(table_size, std::ctype_base::mask());
         rc['\n'] = std::ctype_base::space;
         return &rc[0];
     }
-};  
+};
 
-const char* ToCString(const v8::String::Utf8Value& value) 
+const char* ToCString(const v8::String::Utf8Value& value)
 {
     return *value ? *value : "<string conversion failed>";
 }
@@ -161,13 +166,13 @@ void Core::execute(const std::string& str) {
         }
 
         if (!result.IsEmpty() && print_result && !result->IsUndefined()) {
-            
+
             if (result->IsArray()) {
 
                 v8::Local<v8::Array> array = v8::Local<v8::Array>::Cast(result->ToObject());
                 for (unsigned int i = 0; i < array->Length(); ++i) {
                     v8::Local<v8::Value> v8_value = array->Get(i);
-                    
+
                     if (v8_value->IsArray()) {
                         v8::Local<v8::Array> arrayInside = v8::Local<v8::Array>::Cast(v8_value->ToObject());
                         printf("\t[%u]\t", i);
@@ -202,7 +207,7 @@ void Core::execute(const std::string& str) {
                 v8::String::Utf8Value value(result->ToDetailString());
                 printf("\t%s\n", *value);
             }
-        } 
+        }
     }
 }
 
@@ -213,7 +218,7 @@ std::string Core::promptString() {
 	ss << ++promptLine;
 	ss << "]>: ";
 
-	return ss.str();	
+	return ss.str();
 }
 
 void Core::RunShell() {
@@ -231,7 +236,7 @@ void Core::RunShell() {
     engine_templ->SetClassName(String::New("QuantJS API"));
 
     Handle<ObjectTemplate> engine_proto = engine_templ->PrototypeTemplate();
-   
+
     Handle<ObjectTemplate> engine_inst = engine_templ->InstanceTemplate();
     engine_inst->SetInternalFieldCount(1);
 
@@ -263,9 +268,9 @@ void Core::RunShell() {
 
 	std::cout << promptString();
 
-    std::for_each(std::istream_iterator<Line>(std::cin), 
-        std::istream_iterator<Line>(), 
-        [=](const std::string& s) { 
+    std::for_each(std::istream_iterator<Line>(std::cin),
+        std::istream_iterator<Line>(),
+        [=](const std::string& s) {
 			// TODO: wrap this pointer
 			this->execute(s);
 			std::cout << std::endl << promptString();
@@ -274,9 +279,22 @@ void Core::RunShell() {
 
 void Core::run() {
 
+    // just for experiementation
+    using namespace boost::numeric::ublas;
+    scalar_vector<double> v (3);
+    std::cout << v << std::endl;
+
+    matrix<double> m (3, 3);
+    for (unsigned i = 0; i < m.size1 (); ++ i)
+        for (unsigned j = 0; j < m.size2 (); ++ j)
+            m (i, j) = 3 * i + j;
+    std::cout << m << std::endl;
+
+    // TODO: Map ublas to JavaScript
+
     // Check options
     if (!options.validate()) return;
         std::cout << options << std::endl;
-	
-	RunShell();	
+
+	RunShell();
 }
